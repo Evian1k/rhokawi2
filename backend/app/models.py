@@ -15,7 +15,7 @@ user_favorites = db.Table('user_favorites',
 
 
 class User(db.Model):
-    """User model for authentication and user management."""
+    """User model for admin authentication and management."""
     
     __tablename__ = 'users'
     
@@ -25,23 +25,21 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
-    role = db.Column(db.String(20), default='client', nullable=False)  # client, agent, admin
+    role = db.Column(db.String(20), default='admin', nullable=False)  # Only admin role
+    is_main_admin = db.Column(db.Boolean, default=False, nullable=False)  # Main admin flag
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationships
-    favorite_properties = db.relationship('Property', secondary=user_favorites, 
-                                        backref=db.backref('favorited_by', lazy='dynamic'))
-    
-    def __init__(self, username, email, password, first_name=None, last_name=None, role='client'):
+    def __init__(self, username, email, password, first_name=None, last_name=None, is_main_admin=False):
         """Initialize User instance."""
         self.username = username
         self.email = email
         self.set_password(password)
         self.first_name = first_name
         self.last_name = last_name
-        self.role = role
+        self.role = 'admin'  # Always admin
+        self.is_main_admin = is_main_admin
     
     def set_password(self, password):
         """Hash and set user password."""
@@ -53,22 +51,16 @@ class User(db.Model):
     
     @property
     def is_admin(self):
-        """Check if user is admin."""
-        return self.role == 'admin'
+        """Check if user is admin (always true now)."""
+        return True
     
-    @property
-    def is_agent(self):
-        """Check if user is agent."""
-        return self.role == 'agent'
-    
-    @property
-    def is_client(self):
-        """Check if user is client."""
-        return self.role == 'client'
+    def can_add_admins(self):
+        """Check if user can add other admins (only main admin)."""
+        return self.is_main_admin
     
     def can_manage_properties(self):
-        """Check if user can create/update/delete properties."""
-        return self.role in ['admin', 'agent']
+        """Check if user can create/update/delete properties (all admins can)."""
+        return True
     
     def to_dict(self):
         """Convert user instance to dictionary."""
@@ -79,6 +71,7 @@ class User(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'role': self.role,
+            'is_main_admin': self.is_main_admin,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
@@ -86,7 +79,8 @@ class User(db.Model):
     
     def __repr__(self):
         """String representation of User."""
-        return f'<User {self.username} ({self.role})>'
+        main_status = " (Main)" if self.is_main_admin else ""
+        return f'<User {self.username} (Admin{main_status})>'
 
 
 class Property(db.Model):
@@ -109,12 +103,14 @@ class Property(db.Model):
     status = db.Column(db.String(20), default='available', nullable=False)  # available, sold, pending
     features = db.Column(db.Text, nullable=True)  # JSON string of features
     images = db.Column(db.Text, nullable=True)  # JSON string of image URLs
-    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Changed from agent_id
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)  # Property accuracy verification
+    verification_notes = db.Column(db.Text, nullable=True)  # Notes about property verification
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
-    agent = db.relationship('User', backref=db.backref('properties', lazy=True))
+    admin = db.relationship('User', backref=db.backref('properties', lazy=True))
     
     def to_dict(self):
         """Convert property instance to dictionary."""
@@ -135,12 +131,14 @@ class Property(db.Model):
             'status': self.status,
             'features': json.loads(self.features) if self.features and self.features != 'null' else [],
             'images': json.loads(self.images) if self.images and self.images != 'null' else [],
-            'agent_id': self.agent_id,
-            'agent': {
-                'id': self.agent.id,
-                'username': self.agent.username,
-                'name': f"{self.agent.first_name} {self.agent.last_name}".strip()
-            } if self.agent else None,
+            'admin_id': self.admin_id,
+            'admin': {
+                'id': self.admin.id,
+                'username': self.admin.username,
+                'name': f"{self.admin.first_name} {self.admin.last_name}".strip()
+            } if self.admin else None,
+            'is_verified': self.is_verified,
+            'verification_notes': self.verification_notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
@@ -160,13 +158,11 @@ class ContactMessage(db.Model):
     email = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
     property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     status = db.Column(db.String(20), default='unread', nullable=False)  # unread, read, replied
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
     property = db.relationship('Property', backref=db.backref('inquiries', lazy=True))
-    user = db.relationship('User', backref=db.backref('messages', lazy=True))
     
     def to_dict(self):
         """Convert contact message instance to dictionary."""
@@ -177,7 +173,6 @@ class ContactMessage(db.Model):
             'message': self.message,
             'property_id': self.property_id,
             'property_title': self.property.title if self.property else None,
-            'user_id': self.user_id,
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

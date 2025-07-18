@@ -1,181 +1,194 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Menu, X, Sun, Moon, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu, X, Home, Building, Phone, Heart, User, LogOut } from 'lucide-react';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navItems = [
-    { name: 'Home', path: '/' },
-    { name: 'About', path: '/about' },
-    { name: 'Services', path: '/services' },
-    { name: 'Properties', path: '/properties' },
-    { name: 'Contact', path: '/contact' },
-  ];
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  const navigation = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Properties', href: '/properties', icon: Building },
+    { name: 'Contact', href: '/contact', icon: Phone },
+  ];
+
+  // Add favorites to navigation if user is logged in as admin
+  if (user) {
+    navigation.push({ name: 'Favorites', href: '/favorites', icon: Heart });
+  }
+
+  const isActive = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <nav className={`fixed w-full z-50 transition-all duration-300 ${
+      isScrolled 
+        ? 'bg-white/95 backdrop-blur-sm shadow-lg border-b border-gray-200/20' 
+        : 'bg-transparent'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">R</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">R</span>
             </div>
-            <span className="text-xl font-bold gradient-text">Rhokawi Properties</span>
+            <span className="text-xl font-bold text-gray-900">Rhokawi Properties</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`nav-link text-sm font-medium transition-colors ${
-                  location.pathname === item.path
-                    ? 'text-red-600'
-                    : 'text-foreground hover:text-red-600'
-                }`}
-              >
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    isActive(item.href)
+                      ? 'text-red-600 bg-red-50'
+                      : 'text-gray-700 hover:text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Right side buttons */}
+          {/* Desktop Auth Section */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="w-9 h-9"
-            >
-              {theme === 'light' ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Sun className="h-4 w-4" />
-              )}
-            </Button>
-            
             {user ? (
-              <div className="flex items-center space-x-2">
-                <Link to="/dashboard">
-                  <Button variant="outline" size="sm">
-                    Dashboard
-                  </Button>
+              <div className="flex items-center space-x-4">
+                <Link
+                  to="/dashboard"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Dashboard</span>
                 </Link>
                 <Button
-                  variant="ghost"
-                  size="icon"
                   onClick={handleLogout}
-                  className="w-9 h-9"
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
                 </Button>
               </div>
             ) : (
-              <Link to="/login">
-                <Button variant="default" size="sm">
-                  Admin Login
-                </Button>
-              </Link>
+              // No public admin login link - admins must know the secret route
+              <div className="text-sm text-gray-500">
+                Welcome to Rhokawi Properties
+              </div>
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="w-9 h-9"
-            >
-              {theme === 'light' ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Sun className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(!isOpen)}
-              className="w-9 h-9"
-            >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <div className="flex flex-col h-full">
+                  {/* Mobile Header */}
+                  <div className="flex justify-between items-center pb-6">
+                    <Link to="/" className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">R</span>
+                      </div>
+                      <span className="text-lg font-bold">Rhokawi Properties</span>
+                    </Link>
+                  </div>
+
+                  {/* Mobile Navigation */}
+                  <div className="flex flex-col space-y-4 flex-1">
+                    {navigation.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-colors duration-200 ${
+                            isActive(item.href)
+                              ? 'text-red-600 bg-red-50'
+                              : 'text-gray-700 hover:text-red-600 hover:bg-red-50'
+                          }`}
+                        >
+                          <Icon className="w-5 h-5" />
+                          <span>{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mobile Auth Section */}
+                  <div className="pt-6 border-t border-gray-200">
+                    {user ? (
+                      <div className="space-y-3">
+                        <Link
+                          to="/dashboard"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
+                        >
+                          <User className="w-5 h-5" />
+                          <span>Dashboard</span>
+                        </Link>
+                        <Button
+                          onClick={() => {
+                            handleLogout();
+                            setIsMobileMenuOpen(false);
+                          }}
+                          variant="outline"
+                          className="w-full flex items-center space-x-2"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Logout</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      // No public admin login link in mobile menu either
+                      <div className="text-center text-sm text-gray-500 py-4">
+                        Welcome to Rhokawi Properties
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-border"
-          >
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`block px-3 py-2 text-base font-medium transition-colors ${
-                    location.pathname === item.path
-                      ? 'text-red-600 bg-red-50 dark:bg-red-950'
-                      : 'text-foreground hover:text-red-600 hover:bg-accent'
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              
-              {user ? (
-                <div className="space-y-1 pt-2 border-t border-border">
-                  <Link
-                    to="/dashboard"
-                    className="block px-3 py-2 text-base font-medium text-foreground hover:text-red-600 hover:bg-accent"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsOpen(false);
-                    }}
-                    className="block w-full text-left px-3 py-2 text-base font-medium text-foreground hover:text-red-600 hover:bg-accent"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 text-base font-medium text-foreground hover:text-red-600 hover:bg-accent"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Admin Login
-                </Link>
-              )}
-            </div>
-          </motion.div>
-        )}
       </div>
     </nav>
   );

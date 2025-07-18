@@ -53,10 +53,20 @@ class ApiService {
     });
   }
 
-  async register(userData) {
-    return this.request('/auth/register', {
+  async addAdmin(adminData) {
+    return this.request('/auth/add-admin', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: JSON.stringify(adminData),
+    });
+  }
+
+  async getAdmins() {
+    return this.request('/auth/admins');
+  }
+
+  async deleteAdmin(adminId) {
+    return this.request(`/auth/admins/${adminId}`, {
+      method: 'DELETE',
     });
   }
 
@@ -105,9 +115,11 @@ class ApiService {
     });
   }
 
-  async getAgentProperties(agentId, params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/properties/agent/${agentId}${queryString ? `?${queryString}` : ''}`);
+  async verifyProperty(id, isVerified, notes = '') {
+    return this.request(`/properties/${id}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_verified: isVerified, verification_notes: notes }),
+    });
   }
 
   async addPropertyImages(propertyId, imageUrls) {
@@ -115,29 +127,6 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ image_urls: imageUrls }),
     });
-  }
-
-  // Favorites methods
-  async getFavorites(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/favorites${queryString ? `?${queryString}` : ''}`);
-  }
-
-  async addToFavorites(propertyId) {
-    return this.request('/favorites', {
-      method: 'POST',
-      body: JSON.stringify({ property_id: propertyId }),
-    });
-  }
-
-  async removeFromFavorites(propertyId) {
-    return this.request(`/favorites/${propertyId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async checkFavoriteStatus(propertyId) {
-    return this.request(`/favorites/${propertyId}/check`);
   }
 
   // Contact methods
@@ -168,11 +157,6 @@ class ApiService {
     return this.request(`/contact/${id}`, {
       method: 'DELETE',
     });
-  }
-
-  async getUserMessages(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/contact/my-messages${queryString ? `?${queryString}` : ''}`);
   }
 
   // File upload methods
@@ -226,34 +210,6 @@ class ApiService {
     }
   }
 
-  // User management methods
-  async getUsers(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/users${queryString ? `?${queryString}` : ''}`);
-  }
-
-  async getUser(id) {
-    return this.request(`/users/${id}`);
-  }
-
-  async updateUser(id, userData) {
-    return this.request(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
-  }
-
-  async deleteUser(id) {
-    return this.request(`/users/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async searchUsers(params) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/users/search?${queryString}`);
-  }
-
   // Health check
   async healthCheck() {
     return this.request('/');
@@ -272,7 +228,9 @@ export default apiService;
 // Export named functions for easier imports
 export const {
   login,
-  register,
+  addAdmin,
+  getAdmins,
+  deleteAdmin,
   refreshToken,
   getCurrentUser,
   getProperties,
@@ -281,25 +239,15 @@ export const {
   createProperty,
   updateProperty,
   deleteProperty,
-  getAgentProperties,
+  verifyProperty,
   addPropertyImages,
-  getFavorites,
-  addToFavorites,
-  removeFromFavorites,
-  checkFavoriteStatus,
   sendContactMessage,
   getContactMessages,
   getContactMessage,
   updateMessageStatus,
   deleteContactMessage,
-  getUserMessages,
   uploadFile,
   uploadMultipleFiles,
-  getUsers,
-  getUser,
-  updateUser,
-  deleteUser,
-  searchUsers,
   healthCheck,
   getApiInfo,
 } = apiService;

@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
       
       if (token) {
         try {
-          // Verify token with backend and get current user
+          // Verify token with backend and get current admin user
           const response = await apiService.getCurrentUser();
           if (response.data) {
             setUser(response.data);
@@ -62,25 +62,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (userData) => {
+  const addAdmin = async (adminData) => {
     try {
-      const response = await apiService.register(userData);
+      const response = await apiService.addAdmin(adminData);
       
-      if (response.data && response.data.access_token) {
-        const { access_token, user } = response.data;
-        
-        // Store token and user data
-        localStorage.setItem('authToken', access_token);
-        localStorage.setItem('userData', JSON.stringify(user));
-        setUser(user);
-        
-        return { success: true, user };
+      if (response.data) {
+        return { success: true, admin: response.data.user };
       }
       
-      return { success: false, error: response.message || 'Registration failed' };
+      return { success: false, error: response.message || 'Failed to add admin' };
     } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: error.message || 'Registration failed' };
+      console.error('Add admin error:', error);
+      return { success: false, error: error.message || 'Failed to add admin' };
     }
   };
 
@@ -114,15 +107,16 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
-    register,
+    addAdmin,
     logout,
     refreshToken,
     updateUser,
     loading,
-    isAdmin: user?.role === 'admin',
-    isAgent: user?.role === 'agent',
-    isClient: user?.role === 'client',
-    canManageProperties: user?.role === 'admin' || user?.role === 'agent',
+    // All users are admins now
+    isAdmin: !!user,
+    isMainAdmin: user?.is_main_admin || false,
+    canAddAdmins: user?.is_main_admin || false,
+    canManageProperties: !!user, // All logged-in users can manage properties
   };
 
   return (
