@@ -17,19 +17,22 @@ def init_database():
         db.drop_all()
         db.create_all()
         
-        # Create main admin user (evian12k)
-        main_admin = User(
-            username='evian12k',
-            email='evian12k@rhokawi.com',
-            password='rhokawi25@12ktbl',
-            first_name='Main',
-            last_name='Admin',
-            is_main_admin=True
-        )
-        db.session.add(main_admin)
-        
-        # Commit the main admin
-        db.session.commit()
+        # Check if main admin already exists
+        existing = User.query.filter_by(username='evian12k').first()
+        if not existing:
+            main_admin = User(
+                username='evian12k',
+                email='evian12k@rhokawi.com',
+                password='rhokawi25@12ktbl',
+                first_name='Main',
+                last_name='Admin',
+                is_main_admin=True
+            )
+            db.session.add(main_admin)
+            db.session.commit()
+            print("Main admin created.")
+        else:
+            print("Main admin already exists.")
         
         print("Database initialized successfully!")
         print(f"Main Admin user: evian12k / rhokawi25@12ktbl")
