@@ -1,344 +1,269 @@
-# Real Estate Platform API
+# 🏠 Rhokawi Properties - Real Estate Platform
 
-A comprehensive Flask backend API for real estate platform with property management, user authentication, role-based access control, and file uploads.
+A comprehensive full-stack real estate platform built with **React** frontend and **Flask** backend, featuring property management, user authentication, advanced search, and role-based access control.
 
-## 🏗️ Project Structure
+## 📋 Table of Contents
 
-```
-├── run.py                 # Application entry point
-├── init_db.py            # Database initialization script
-├── config.py             # Configuration settings
-├── requirements.txt      # Python dependencies
-├── Procfile             # Deployment configuration
-├── render.yaml          # Render deployment config
-├── .env                 # Environment variables (development)
-├── .env.example         # Environment variables template
-└── app/
-    ├── __init__.py      # Flask app factory
-    ├── models.py        # Database models
-    ├── schemas.py       # Validation schemas
-    ├── utils.py         # Utility functions
-    └── routes/
-        ├── __init__.py  # Routes registration
-        ├── main.py      # Health check endpoints
-        ├── auth.py      # Authentication routes
-        ├── users.py     # User management routes
-        ├── properties.py # Property management routes
-        ├── favorites.py  # User favorites routes
-        ├── contact.py    # Contact message routes
-        └── upload.py     # File upload routes
-```
+- [Features](#-features)
+- [Project Structure](#-project-structure)
+- [Quick Start](#-quick-start)
+- [Development](#-development)
+- [API Documentation](#-api-documentation)
+- [Deployment](#-deployment)
+- [Technologies](#-technologies)
+- [Contributing](#-contributing)
 
 ## ✨ Features
 
-### 🔐 **Authentication & Authorization**
-- JWT authentication with access and refresh tokens
-- Role-based access control (Admin, Agent, Client)
-- Password hashing with Werkzeug
-- Protected routes with decorators
-
 ### 🏠 **Property Management**
-- CRUD operations for properties
-- Advanced search with multiple filters
-- Property image management
-- Agent-specific property listings
-- Property status management (available, sold, pending)
+- Complete CRUD operations for properties
+- Advanced search with multiple filters (location, price, type, bedrooms)
+- Property image galleries with secure uploads
+- Agent-specific property management
+- Property status tracking (available, sold, pending)
 
-### ❤️ **User Favorites**
-- Save/remove properties to favorites
-- View user's favorite properties
-- Check favorite status for properties
+### 🔐 **Authentication & Authorization**
+- JWT-based authentication system
+- Role-based access control (Admin, Agent, Client)
+- Secure password hashing
+- Token refresh mechanism
+
+### 👥 **User Roles**
+- **Admin**: Full system access, user management, all properties
+- **Agent**: Create/manage own properties, view inquiries
+- **Client**: Browse properties, save favorites, send inquiries
+
+### 🔍 **Advanced Search**
+- Location-based filtering
+- Price range search
+- Property type filtering
+- Bedroom/bathroom filters
+- Pagination support
+
+### ❤️ **Favorites System**
+- Save properties to favorites
+- View saved properties
+- Remove from favorites
+- User-specific favorites management
 
 ### 📧 **Contact System**
 - Contact form submissions
 - Property-specific inquiries
-- Message status management (unread, read, replied)
-- Admin message management
+- Message status management
+- Admin message dashboard
 
-### 📁 **File Upload System**
+### 📁 **File Management**
 - Secure image uploads
-- Multiple file upload support
-- File type validation (PNG, JPG, JPEG, GIF, WEBP)
-- File size limits (16MB per file, 100MB total)
-- Automatic file serving
+- Multiple file support
+- File type validation
+- Size limits and optimization
 
-### 🔍 **Advanced Search**
-- Location-based search
-- Price range filtering
-- Property type filtering
-- Bedroom count filtering
-- Pagination support
+## 📁 Project Structure
 
-## 🚀 API Endpoints
-
-### **Authentication**
 ```
-POST   /api/auth/register     - Register new user
-POST   /api/auth/login        - User login
-POST   /api/auth/refresh      - Refresh access token
-GET    /api/auth/me           - Get current user info
-```
-
-### **Properties**
-```
-GET    /api/properties        - Get all properties (paginated)
-GET    /api/properties/search - Search properties with filters
-GET    /api/properties/{id}   - Get specific property
-POST   /api/properties        - Create property (agent/admin)
-PUT    /api/properties/{id}   - Update property (owner/admin)
-DELETE /api/properties/{id}   - Delete property (owner/admin)
-GET    /api/properties/agent/{id} - Get properties by agent
-POST   /api/properties/{id}/images - Add images to property
-```
-
-### **Favorites**
-```
-GET    /api/favorites         - Get user's favorite properties
-POST   /api/favorites         - Add property to favorites
-DELETE /api/favorites/{id}    - Remove property from favorites
-GET    /api/favorites/{id}/check - Check if property is favorited
-```
-
-### **Contact Messages**
-```
-POST   /api/contact           - Send contact message (public)
-GET    /api/contact           - Get all messages (admin)
-GET    /api/contact/{id}      - Get specific message (admin)
-PUT    /api/contact/{id}/status - Update message status (admin)
-DELETE /api/contact/{id}      - Delete message (admin)
-GET    /api/contact/my-messages - Get user's messages
-```
-
-### **File Upload**
-```
-POST   /api/upload            - Upload single file
-POST   /api/upload/multiple   - Upload multiple files
-GET    /api/upload/{filename} - Serve uploaded file
+rhokawi-properties/
+├── backend/                    # Flask API Server
+│   ├── app/                   
+│   │   ├── routes/            # API route blueprints
+│   │   │   ├── auth.py       # Authentication endpoints
+│   │   │   ├── properties.py # Property management
+│   │   │   ├── favorites.py  # User favorites
+│   │   │   ├── contact.py    # Contact messages
+│   │   │   ├── upload.py     # File uploads
+│   │   │   └── users.py      # User management
+│   │   ├── models.py         # Database models
+│   │   ├── schemas.py        # Validation schemas
+│   │   ├── utils.py          # Utility functions
+│   │   └── __init__.py       # App factory
+│   ├── instance/             # Database files
+│   ├── venv/                 # Python virtual environment
+│   ├── run.py               # Application entry point
+│   ├── config.py            # Configuration settings
+│   ├── init_db.py          # Database initialization
+│   ├── requirements.txt     # Python dependencies
+│   ├── Procfile            # Deployment config
+│   └── render.yaml         # Render deployment
+│
+├── frontend/                  # React Application
+│   ├── src/
+│   │   ├── components/       # Reusable UI components
+│   │   ├── pages/           # Page components
+│   │   ├── contexts/        # React contexts
+│   │   ├── lib/            # Utilities and API client
+│   │   │   └── api.js      # Complete API service layer
+│   │   └── main.jsx        # Application entry point
+│   ├── public/              # Static assets
+│   ├── package.json         # Node.js dependencies
+│   ├── vite.config.js      # Vite configuration
+│   ├── tailwind.config.js  # Tailwind CSS config
+│   └── index.html          # HTML template
+│
+├── docs/                     # Documentation
+│   ├── README.md            # Comprehensive project guide
+│   ├── FRONTEND_BACKEND_CONNECTION.md
+│   ├── TRANSFORMATION_COMPLETE.md
+│   └── FLASK_SETUP_SUMMARY.md
+│
+└── README.md                # This file
 ```
 
-### **Users**
-```
-GET    /api/users             - Get all users (paginated)
-GET    /api/users/{id}        - Get specific user
-PUT    /api/users/{id}        - Update user (self/admin)
-DELETE /api/users/{id}        - Delete user (admin)
-GET    /api/users/search      - Search users
-```
+## 🚀 Quick Start
 
-## 👥 User Roles
+### Prerequisites
+- **Node.js** (v18+)
+- **Python** (v3.9+)
+- **Git**
 
-### **Client** (Default)
-- View properties
-- Search and filter properties
-- Save/remove favorites
-- Send contact messages
-- View own profile and messages
-
-### **Agent**
-- All client permissions
-- Create, update, delete own properties
-- Manage property images
-- View all contact messages for their properties
-
-### **Admin**
-- All permissions
-- Manage all users and properties
-- View and manage all contact messages
-- Delete any content
-- Access admin-only endpoints
-
-## 📊 Database Models
-
-### **User**
-- Basic user information (username, email, name)
-- Role-based permissions
-- Password hashing
-- Timestamps
-
-### **Property**
-- Complete property details
-- JSON fields for features and images
-- Agent relationship
-- Status management
-- Advanced search fields
-
-### **ContactMessage**
-- Contact form submissions
-- Property-specific inquiries
-- Status tracking
-- User relationship (optional)
-
-### **User Favorites** (Many-to-Many)
-- User ↔ Property relationship table
-- Efficient favorite management
-
-## 🛠️ Installation & Setup
-
-### 1. **Clone Repository**
+### 1. Clone Repository
 ```bash
-git clone <repository-url>
-cd real-estate-api
+git clone https://github.com/Evian1k/rhokawi2.git
+cd rhokawi2
 ```
 
-### 2. **Create Virtual Environment**
+### 2. Backend Setup
 ```bash
-python3 -m venv venv
+cd backend
+python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### 3. **Install Dependencies**
-```bash
 pip install -r requirements.txt
-```
-
-### 4. **Environment Configuration**
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-### 5. **Initialize Database**
-```bash
 python init_db.py
+python run.py
 ```
+**Backend runs on:** http://localhost:5000
 
-### 6. **Run Application**
+### 3. Frontend Setup
 ```bash
+cd frontend
+npm install
+npm run dev
+```
+**Frontend runs on:** http://localhost:3000
+
+### 4. Test the Application
+- Visit: http://localhost:3000
+- Login credentials:
+  - **Admin:** `admin` / `admin123`
+  - **Agent:** `agent1` / `agent123`
+  - **Client:** `client1` / `client123`
+
+## 🛠️ Development
+
+### Backend Development
+```bash
+cd backend
+source venv/bin/activate
 python run.py
 ```
 
-The API will be available at `http://localhost:5000`
-
-## 🔧 Environment Variables
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `FLASK_ENV` | Environment mode | development | No |
-| `FLASK_DEBUG` | Debug mode | False | No |
-| `FLASK_HOST` | Host to bind | 0.0.0.0 | No |
-| `FLASK_PORT` | Port to listen | 5000 | No |
-| `SECRET_KEY` | Flask secret key | - | Yes |
-| `JWT_SECRET_KEY` | JWT signing key | Uses SECRET_KEY | No |
-| `DATABASE_URL` | Database connection | sqlite:///app.db | No |
-| `CORS_ORIGINS` | Allowed CORS origins | * | No |
-
-## 🧪 Sample Data
-
-The `init_db.py` script creates sample users and properties:
-
-**Sample Users:**
-- **Admin:** `admin` / `admin123`
-- **Agent:** `agent1` / `agent123`
-- **Client:** `client1` / `client123`
-
-**Sample Properties:**
-- Beautiful Family Home (Los Angeles)
-- Downtown Luxury Apartment (New York)
-- Cozy Townhouse (Austin)
-
-## 🔍 Search Examples
-
-### **Basic Property Search**
+### Frontend Development
 ```bash
-GET /api/properties/search?location=Los Angeles&min_price=500000&max_price=1000000
+cd frontend
+npm run dev
 ```
 
-### **Advanced Filtering**
+### Database Management
 ```bash
-GET /api/properties/search?property_type=house&bedrooms=3&location=CA&page=1&per_page=20
+cd backend
+source venv/bin/activate
+python init_db.py  # Initialize/reset database
 ```
 
-## 📝 Usage Examples
+## 📚 API Documentation
 
-### **Register New Agent**
-```bash
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "neweagent",
-    "email": "newagent@example.com",
-    "password": "password123",
-    "role": "agent",
-    "first_name": "New",
-    "last_name": "Agent"
-  }'
+### Base URL
+- **Development:** `http://localhost:5000/api`
+- **Production:** `https://your-domain.com/api`
+
+### Authentication Endpoints
+```
+POST   /auth/login           # User login
+POST   /auth/register        # User registration
+GET    /auth/me              # Get current user
+POST   /auth/refresh         # Refresh token
 ```
 
-### **Create Property** (Agent/Admin only)
-```bash
-curl -X POST http://localhost:5000/api/properties \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <access_token>" \
-  -d '{
-    "title": "Modern Condo",
-    "description": "Beautiful modern condo with city views",
-    "property_type": "condo",
-    "location": "San Francisco, CA",
-    "price": 850000,
-    "bedrooms": 2,
-    "bathrooms": 2,
-    "square_feet": 1200,
-    "features": ["Balcony", "Modern Kitchen", "Parking"]
-  }'
+### Property Endpoints
+```
+GET    /properties           # List properties (paginated)
+GET    /properties/search    # Advanced search
+GET    /properties/{id}      # Get property details
+POST   /properties           # Create property (agent/admin)
+PUT    /properties/{id}      # Update property
+DELETE /properties/{id}      # Delete property
 ```
 
-### **Add to Favorites**
-```bash
-curl -X POST http://localhost:5000/api/favorites \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <access_token>" \
-  -d '{"property_id": 1}'
-```
+### Additional Endpoints
+- **Favorites:** `/favorites`
+- **Contact:** `/contact`
+- **Upload:** `/upload`
+- **Users:** `/users`
 
-### **Upload Property Image**
-```bash
-curl -X POST http://localhost:5000/api/upload \
-  -H "Authorization: Bearer <access_token>" \
-  -F "file=@image.jpg"
-```
+See [API Documentation](docs/FRONTEND_BACKEND_CONNECTION.md) for complete details.
 
 ## 🚀 Deployment
 
-### **Render.com**
-1. Connect your GitHub repository to Render
-2. Use the provided `render.yaml` configuration
-3. Set environment variables in Render dashboard
+### Backend Deployment (Render.com)
+1. Connect GitHub repository to Render
+2. Use `backend/render.yaml` configuration
+3. Set environment variables
 4. Deploy automatically
 
-### **Manual Deployment**
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### Frontend Deployment (Vercel/Netlify)
+1. Connect GitHub repository
+2. Set build directory to `frontend`
+3. Configure environment variables
+4. Deploy
 
-# Set environment variables
-export FLASK_ENV=production
-export SECRET_KEY=your-secret-key
-export DATABASE_URL=your-database-url
+### Environment Variables
 
-# Initialize database
-python init_db.py
-
-# Run with Gunicorn
-gunicorn run:app
+**Backend (.env):**
+```env
+FLASK_ENV=production
+SECRET_KEY=your-secret-key
+DATABASE_URL=your-database-url
+CORS_ORIGINS=https://your-frontend-domain.com
 ```
 
-## 🛡️ Security Features
+**Frontend (.env):**
+```env
+VITE_API_URL=https://your-backend-domain.com/api
+```
 
-- **JWT Authentication:** Secure token-based authentication
-- **Password Hashing:** Werkzeug secure password hashing
-- **Role-based Access:** Granular permission system
-- **Input Validation:** Marshmallow schema validation
-- **File Upload Security:** Type and size validation
-- **CORS Configuration:** Configurable cross-origin policies
-- **SQL Injection Protection:** SQLAlchemy ORM protection
+## 🛠️ Technologies
 
-## 📈 Performance Features
+### Backend
+- **Flask** - Python web framework
+- **SQLAlchemy** - Database ORM
+- **JWT** - Authentication tokens
+- **Marshmallow** - Data validation
+- **Flask-CORS** - Cross-origin requests
+- **Gunicorn** - Production server
 
-- **Pagination:** Efficient data loading
-- **Database Indexing:** Optimized queries
-- **File Compression:** Pillow image optimization
-- **Lazy Loading:** Efficient relationship loading
-- **Query Optimization:** Advanced search queries
+### Frontend
+- **React** - UI framework
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **React Router** - Navigation
+- **Framer Motion** - Animations
+- **Radix UI** - Component library
+
+### Database
+- **SQLite** (Development)
+- **PostgreSQL** (Production)
+
+## 📊 Features Overview
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| 🔐 Authentication | ✅ Complete | JWT-based with role management |
+| 🏠 Property Management | ✅ Complete | Full CRUD with search |
+| ❤️ Favorites System | ✅ Complete | Save/remove properties |
+| 📧 Contact System | ✅ Complete | Message management |
+| 📁 File Uploads | ✅ Complete | Image upload system |
+| 🔍 Advanced Search | ✅ Complete | Multiple filter options |
+| 👥 User Roles | ✅ Complete | Admin/Agent/Client |
+| 📱 Responsive Design | ✅ Complete | Mobile-friendly UI |
+| 🚀 Production Ready | ✅ Complete | Deployment configured |
 
 ## 🤝 Contributing
 
@@ -352,9 +277,13 @@ gunicorn run:app
 
 This project is licensed under the MIT License.
 
-## 🆘 Support
+## 📞 Support
 
 For support and questions:
-- Open an issue on GitHub
-- Check the API documentation at `/api`
-- Review the comprehensive error messages
+- 📧 Email: info@rhokawiproperties.com
+- 📱 Phone: +254 713 663 866
+- 🌐 Website: [Rhokawi Properties](https://rhokawiproperties.com)
+
+---
+
+**Built with ❤️ for modern real estate management**
