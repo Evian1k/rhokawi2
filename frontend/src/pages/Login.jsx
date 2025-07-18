@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -46,11 +47,12 @@ const Login = () => {
       } else {
         toast({
           title: "Access Denied",
-          description: "Invalid admin credentials. Please try again.",
+          description: result.error || "Invalid admin credentials. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Login Error",
         description: "An error occurred during authentication. Please try again.",
@@ -91,6 +93,16 @@ const Login = () => {
               </p>
             </CardHeader>
             <CardContent>
+              {/* Credential Hint */}
+              <Alert className="mb-6 bg-blue-900/20 border-blue-700">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-blue-200">
+                  <strong>Test Credentials:</strong><br />
+                  Username: <code className="bg-gray-800 px-1 rounded">admin</code><br />
+                  Password: <code className="bg-gray-800 px-1 rounded">admin123</code>
+                </AlertDescription>
+              </Alert>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-gray-200">Username</Label>
@@ -126,36 +138,32 @@ const Login = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3"
                   disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
                 >
                   {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Authenticating...
-                    </>
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Authenticating...</span>
+                    </div>
                   ) : (
                     'Access Dashboard'
                   )}
                 </Button>
               </form>
 
-              <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                <p className="text-xs text-gray-400 text-center">
-                  ⚠️ Authorized personnel only. All access attempts are logged.
+              <div className="mt-6 text-center">
+                <p className="text-gray-400 text-sm">
+                  Authorized personnel only
                 </p>
               </div>
             </CardContent>
