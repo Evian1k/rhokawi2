@@ -86,13 +86,9 @@ const Dashboard = () => {
     try {
       const response = await apiService.getContactMessages({ page, per_page: 10 });
       if (response.data) {
-<<<<<<< HEAD
-        setContacts(response.data || []); // Show all contacts for admin
-=======
         setContacts(response.data.messages || []);
         setContactsTotalPages(response.data.pagination?.pages || 1);
         setContactsPage(page);
->>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
       }
     } catch (error) {
       console.error('Failed to load contacts:', error);
@@ -508,7 +504,6 @@ const Dashboard = () => {
           {/* Contacts Tab */}
           {activeTab === 'contacts' && (
             <div>
-<<<<<<< HEAD
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Contact Messages</h2>
                 <Button
@@ -521,9 +516,6 @@ const Dashboard = () => {
                 </Button>
               </div>
               
-=======
-              <h2 className="text-xl font-semibold mb-6">Contact Messages</h2>
->>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
               {contacts.length === 0 ? (
                 <Card>
                   <CardContent className="p-12 text-center">
@@ -533,7 +525,6 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-<<<<<<< HEAD
                 <div className="space-y-4">
                   {contacts.map((contact) => (
                     <Card key={contact.id} className={contact.status === 'unread' ? 'border-l-4 border-l-red-500' : ''}>
@@ -613,152 +604,106 @@ const Dashboard = () => {
                     </Card>
                   ))}
                 </div>
-=======
-                <>
-                  <div className="space-y-4">
-                    {contacts.map((contact) => (
-                      <Card key={contact.id}>
-                        <CardContent className="p-6">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h3 className="font-semibold">{contact.name}</h3>
-                              <p className="text-gray-600">{contact.email}</p>
-                              {contact.phone && <p className="text-gray-600">{contact.phone}</p>}
-                              {contact.subject && <p className="text-gray-800 font-semibold">Subject: {contact.subject}</p>}
-                            </div>
-                            <Badge variant="secondary">
-                              {new Date(contact.created_at).toLocaleDateString()}
-                            </Badge>
-                          </div>
-                          <p className="text-gray-700 mb-4">{contact.message}</p>
-                          {contact.property_title && (
-                            <p className="text-sm text-gray-500">
-                              Regarding: <span className="font-medium">{contact.property_title}</span>
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  <div className="flex justify-between items-center mt-6">
-                    <Button
-                      variant="outline"
-                      disabled={contactsPage <= 1}
-                      onClick={() => loadContacts(contactsPage - 1)}
-                    >
-                      Previous
-                    </Button>
-                    <span>Page {contactsPage} of {contactsTotalPages}</span>
-                    <Button
-                      variant="outline"
-                      disabled={contactsPage >= contactsTotalPages}
-                      onClick={() => loadContacts(contactsPage + 1)}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </>
->>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
               )}
             </div>
           )}
+
+          {/* Property Form Modal */}
+          {showForm && (
+            <PropertyForm
+              property={editingProperty}
+              onSubmit={handlePropertySubmit}
+              onClose={() => {
+                setShowForm(false);
+                setEditingProperty(null);
+              }}
+            />
+          )}
+
+          {/* Add Admin Modal */}
+          {showAdminForm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 className="text-lg font-semibold mb-4">Add New Admin</h3>
+                <form onSubmit={handleAddAdmin} className="space-y-4">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={adminForm.username}
+                      onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })}
+                      className="w-full p-3 border rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={adminForm.email}
+                      onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                      className="w-full p-3 border rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={adminForm.password}
+                      onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                      className="w-full p-3 border rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={adminForm.first_name}
+                      onChange={(e) => setAdminForm({ ...adminForm, first_name: e.target.value })}
+                      className="w-full p-3 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Last Name"
+                      value={adminForm.last_name}
+                      onChange={(e) => setAdminForm({ ...adminForm, last_name: e.target.value })}
+                      className="w-full p-3 border rounded-lg"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                      Add Admin
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setShowAdminForm(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation */}
+          {deletingProperty && (
+            <ConfirmationDialog
+              isOpen={true}
+              onClose={() => setDeletingProperty(null)}
+              onConfirm={confirmDeleteProperty}
+              title="Delete Property"
+              description={`Are you sure you want to delete "${deletingProperty.title}"? This action cannot be undone.`}
+            />
+          )}
         </div>
       </div>
-
-      {/* Property Form Modal */}
-      {showForm && (
-        <PropertyForm
-          property={editingProperty}
-          onSubmit={handlePropertySubmit}
-          onClose={() => {
-            setShowForm(false);
-            setEditingProperty(null);
-          }}
-        />
-      )}
-
-      {/* Add Admin Modal */}
-      {showAdminForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Add New Admin</h3>
-            <form onSubmit={handleAddAdmin} className="space-y-4">
-              <div>
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={adminForm.username}
-                  onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })}
-                  className="w-full p-3 border rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={adminForm.email}
-                  onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
-                  className="w-full p-3 border rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={adminForm.password}
-                  onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
-                  className="w-full p-3 border rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <input
-                  type="text"
-                  placeholder="First Name"
-                  value={adminForm.first_name}
-                  onChange={(e) => setAdminForm({ ...adminForm, first_name: e.target.value })}
-                  className="w-full p-3 border rounded-lg"
-                />
-              </div>
-              <div>
-                <input
-                  type="text"
-                  placeholder="Last Name"
-                  value={adminForm.last_name}
-                  onChange={(e) => setAdminForm({ ...adminForm, last_name: e.target.value })}
-                  className="w-full p-3 border rounded-lg"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
-                  Add Admin
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowAdminForm(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation */}
-      {deletingProperty && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setDeletingProperty(null)}
-          onConfirm={confirmDeleteProperty}
-          title="Delete Property"
-          description={`Are you sure you want to delete "${deletingProperty.title}"? This action cannot be undone.`}
-        />
-      )}
     </>
   );
 };

@@ -66,12 +66,8 @@ const Contact = () => {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-<<<<<<< HEAD
-        message: `Subject: ${formData.subject}\n\nMessage:\n${formData.message}`
-=======
         subject: formData.subject,
-        message: formData.message
->>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
+        message: `Subject: ${formData.subject}\n\nMessage:\n${formData.message}`
       };
 
       const response = await apiService.sendContactMessage(messageData);
