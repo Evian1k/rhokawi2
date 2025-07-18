@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import User
 from app.schemas import user_schema, user_login_schema, error_schema
-from app.utils import validate_json, success_response, handle_error
+from app.utils import validate_json, success_response, handle_error, admin_required
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -88,7 +88,7 @@ def login(validated_data):
 
 
 @auth_bp.route('/add-admin', methods=['POST'])
-@jwt_required()
+@admin_required
 def add_admin():
     """
     Add a new admin user (only main admin can do this).
@@ -168,7 +168,7 @@ def add_admin():
 
 
 @auth_bp.route('/admins', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_admins():
     """
     Get all admin users (only main admin can do this).
@@ -198,7 +198,7 @@ def get_admins():
 
 
 @auth_bp.route('/admins/<int:admin_id>', methods=['DELETE'])
-@jwt_required()
+@admin_required
 def delete_admin(admin_id):
     """
     Delete an admin user (only main admin can do this).
@@ -286,7 +286,7 @@ def get_current_user():
 
 
 @auth_bp.route('/refresh', methods=['POST'])
-@jwt_required(refresh=True)
+@admin_required
 def refresh_token():
     """
     Refresh access token using refresh token.
@@ -316,7 +316,7 @@ def refresh_token():
 
 
 @auth_bp.route('/change-password', methods=['POST'])
-@jwt_required()
+@admin_required
 def change_password():
     """
     Change password endpoint (only main admin can change their own password).
@@ -378,7 +378,7 @@ def change_password():
 
 
 @auth_bp.route('/logout', methods=['POST'])
-@jwt_required()
+@admin_required
 def logout():
     """
     Logout endpoint (token invalidation handled on frontend).

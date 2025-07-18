@@ -227,7 +227,7 @@ def delete_message(message_id):
 
 
 @contact_bp.route('/my-messages', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_user_messages():
     """
     Get contact messages from the current authenticated user.

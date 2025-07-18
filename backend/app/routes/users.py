@@ -14,7 +14,7 @@ users_bp = Blueprint('users', __name__)
 
 
 @users_bp.route('', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_users():
     """
     Get all users (with pagination).
@@ -45,7 +45,7 @@ def get_users():
 
 
 @users_bp.route('/<int:user_id>', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_user(user_id):
     """
     Get a specific user by ID.
@@ -70,7 +70,7 @@ def get_user(user_id):
 
 
 @users_bp.route('/<int:user_id>', methods=['PUT'])
-@jwt_required()
+@admin_required
 def update_user(user_id):
     """
     Update a user's information.
@@ -182,7 +182,7 @@ def delete_user(user_id):
 
 
 @users_bp.route('/search', methods=['GET'])
-@jwt_required()
+@admin_required
 def search_users():
     """
     Search users by username or email.

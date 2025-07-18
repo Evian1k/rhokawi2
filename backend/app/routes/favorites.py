@@ -7,13 +7,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models import Property, User
 from app.schemas import properties_schema
-from app.utils import success_response, handle_error, paginate_query
+from app.utils import success_response, handle_error, paginate_query, admin_required
 
 favorites_bp = Blueprint('favorites', __name__)
 
 
 @favorites_bp.route('', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_favorites():
     """
     Get user's favorite properties (with pagination).
@@ -58,7 +58,7 @@ def get_favorites():
 
 
 @favorites_bp.route('', methods=['POST'])
-@jwt_required()
+@admin_required
 def add_favorite():
     """
     Add a property to user's favorites.
@@ -126,7 +126,7 @@ def add_favorite():
 
 
 @favorites_bp.route('/<int:property_id>', methods=['DELETE'])
-@jwt_required()
+@admin_required
 def remove_favorite(property_id):
     """
     Remove a property from user's favorites.
@@ -174,7 +174,7 @@ def remove_favorite(property_id):
 
 
 @favorites_bp.route('/<int:property_id>/check', methods=['GET'])
-@jwt_required()
+@admin_required
 def check_favorite(property_id):
     """
     Check if a property is in user's favorites.

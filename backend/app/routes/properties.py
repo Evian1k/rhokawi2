@@ -330,7 +330,7 @@ def delete_property(property_id):
 
 
 @properties_bp.route('/<int:property_id>/verify', methods=['PUT'])
-@jwt_required()
+@admin_required
 def verify_property(property_id):
     """
     Verify/unverify a property for public display (admin only).
@@ -375,7 +375,7 @@ def verify_property(property_id):
 
 
 @properties_bp.route('/<int:property_id>/images', methods=['POST'])
-@jwt_required()
+@admin_required
 def add_property_images(property_id):
     """
     Add images to a property (admin only).
