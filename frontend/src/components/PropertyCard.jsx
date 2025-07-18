@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 const PropertyCard = ({ property, index }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-KE', {
@@ -18,17 +20,11 @@ const PropertyCard = ({ property, index }) => {
   };
 
   const handleViewDetails = (propertyId) => {
-    toast({
-      title: "🚧 Feature Coming Soon!",
-      description: "Property details view isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀",
-    });
+    navigate(`/properties/${propertyId}`);
   };
 
   const handleContactAgent = () => {
-    toast({
-      title: "🚧 Feature Coming Soon!",
-      description: "Contact agent feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀",
-    });
+    navigate(`/properties/${property.id}`, { state: { openContact: true } });
   };
 
   return (
@@ -43,7 +39,13 @@ const PropertyCard = ({ property, index }) => {
           <img 
             className="w-full h-full object-cover"
             alt={`${property.title} - ${property.location}`}
-           src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
+            src={property.images && property.images.length > 0 
+              ? (property.images[0].startsWith('http') 
+                ? property.images[0] 
+                : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/images/${property.images[0]}`)
+              : "https://images.unsplash.com/photo-1595872018818-97555653a011"
+            }
+          />
           {property.featured && (
             <div className="absolute top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center">
               <Star className="w-3 h-3 mr-1" />
@@ -64,22 +66,28 @@ const PropertyCard = ({ property, index }) => {
                 {formatPrice(property.price)}
               </span>
               <span className="text-sm bg-muted px-2 py-1 rounded">
-                {property.type}
+                {property.property_type}
               </span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground mb-4">
-              <span className="flex items-center">
-                <Bed className="w-4 h-4 mr-1" />
-                {property.bedrooms} Beds
-              </span>
-              <span className="flex items-center">
-                <Bath className="w-4 h-4 mr-1" />
-                {property.bathrooms} Baths
-              </span>
-              <span className="flex items-center">
-                <Square className="w-4 h-4 mr-1" />
-                {property.area} sqm
-              </span>
+              {property.bedrooms && (
+                <span className="flex items-center">
+                  <Bed className="w-4 h-4 mr-1" />
+                  {property.bedrooms} Beds
+                </span>
+              )}
+              {property.bathrooms && (
+                <span className="flex items-center">
+                  <Bath className="w-4 h-4 mr-1" />
+                  {property.bathrooms} Baths
+                </span>
+              )}
+              {property.square_feet && (
+                <span className="flex items-center">
+                  <Square className="w-4 h-4 mr-1" />
+                  {property.square_feet} sqft
+                </span>
+              )}
             </div>
           </div>
           <div className="flex gap-2 mt-auto">
@@ -92,7 +100,7 @@ const PropertyCard = ({ property, index }) => {
             <Button
               variant="outline"
               className="flex-1"
-              onClick={handleContactAgent}
+              onClick={() => handleContactAgent()}
             >
               Contact
             </Button>

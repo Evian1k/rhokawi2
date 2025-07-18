@@ -8,6 +8,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Home from '@/pages/Home';
 import Properties from '@/pages/Properties';
+import PropertyDetail from '@/pages/PropertyDetail';
+import PropertyMap from '@/pages/PropertyMap';
 import Contact from '@/pages/Contact';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -31,6 +33,8 @@ function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/properties" element={<Properties />} />
+                <Route path="/properties/:id" element={<PropertyDetail />} />
+                <Route path="/property-map" element={<PropertyMap />} />
                 <Route path="/contact" element={<Contact />} />
                 
                 {/* Secret admin access route - not linked anywhere publicly */}

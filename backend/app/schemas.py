@@ -106,6 +106,7 @@ class ContactMessageSchema(Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True, validate=Length(min=1, max=100))
     email = fields.Email(required=True, validate=Email())
+    phone = fields.String(allow_none=True, validate=Length(max=20))
     message = fields.String(required=True, validate=Length(min=1))
     property_id = fields.Integer(allow_none=True)
     property_title = fields.String(dump_only=True)

@@ -30,6 +30,7 @@ const Navbar = () => {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Properties', href: '/properties', icon: Building },
+    { name: 'Property Map', href: '/property-map', icon: Building },
     { name: 'Contact', href: '/contact', icon: Phone },
   ];
 

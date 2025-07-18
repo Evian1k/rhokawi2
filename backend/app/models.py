@@ -156,6 +156,7 @@ class ContactMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(20), nullable=True)
     message = db.Column(db.Text, nullable=False)
     property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=True)
     status = db.Column(db.String(20), default='unread', nullable=False)  # unread, read, replied
@@ -170,6 +171,7 @@ class ContactMessage(db.Model):
             'id': self.id,
             'name': self.name,
             'email': self.email,
+            'phone': self.phone,
             'message': self.message,
             'property_id': self.property_id,
             'property_title': self.property.title if self.property else None,

@@ -53,6 +53,7 @@ def send_message(validated_data):
         message = ContactMessage(
             name=validated_data['name'],
             email=validated_data['email'],
+            phone=validated_data.get('phone'),
             message=validated_data['message'],
             property_id=property_id,
             user_id=current_user_id
