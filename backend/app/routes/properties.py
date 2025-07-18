@@ -191,7 +191,7 @@ def create_property(validated_data):
             features=json.dumps(validated_data.get('features', [])),
             images=json.dumps(validated_data.get('images', [])),
             admin_id=current_user.id,
-            is_verified=False  # New properties start unverified
+            is_verified=True  # Auto-verify admin-created properties
         )
         
         db.session.add(property)
