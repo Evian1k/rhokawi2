@@ -15,7 +15,7 @@ class UserSchema(Schema):
     password = fields.String(required=True, load_only=True, validate=Length(min=6))
     first_name = fields.String(allow_none=True, validate=Length(max=50))
     last_name = fields.String(allow_none=True, validate=Length(max=50))
-    role = fields.String(validate=OneOf(['client', 'agent', 'admin']), missing='client')
+    role = fields.String(validate=OneOf(['client', 'agent', 'admin']), load_default='client')
     is_active = fields.Boolean(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
@@ -43,9 +43,9 @@ class PropertySchema(Schema):
     square_feet = fields.Integer(allow_none=True, validate=validate.Range(min=0))
     lot_size = fields.String(allow_none=True, validate=Length(max=50))
     year_built = fields.Integer(allow_none=True, validate=validate.Range(min=1800, max=2030))
-    status = fields.String(validate=OneOf(['available', 'sold', 'pending']), missing='available')
-    features = fields.List(fields.String(), missing=[])
-    images = fields.List(fields.String(), missing=[])
+    status = fields.String(validate=OneOf(['available', 'sold', 'pending']), load_default='available')
+    features = fields.List(fields.String(), load_default=[])
+    images = fields.List(fields.String(), load_default=[])
     agent_id = fields.Integer(allow_none=True)
     agent = fields.String(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
@@ -66,7 +66,7 @@ class PropertyCreateSchema(Schema):
     square_feet = fields.Integer(allow_none=True, validate=validate.Range(min=0))
     lot_size = fields.String(allow_none=True, validate=Length(max=50))
     year_built = fields.Integer(allow_none=True, validate=validate.Range(min=1800, max=2030))
-    features = fields.List(fields.String(), missing=[])
+    features = fields.List(fields.String(), load_default=[])
 
 
 class PropertyUpdateSchema(Schema):
@@ -96,8 +96,8 @@ class PropertySearchSchema(Schema):
     max_price = fields.Decimal(allow_none=True, places=2, validate=validate.Range(min=0))
     bedrooms = fields.Integer(allow_none=True, validate=validate.Range(min=0))
     status = fields.String(allow_none=True, validate=OneOf(['available', 'sold', 'pending']))
-    page = fields.Integer(missing=1, validate=validate.Range(min=1))
-    per_page = fields.Integer(missing=20, validate=validate.Range(min=1, max=100))
+    page = fields.Integer(load_default=1, validate=validate.Range(min=1))
+    per_page = fields.Integer(load_default=20, validate=validate.Range(min=1, max=100))
 
 
 class ContactMessageSchema(Schema):
@@ -107,6 +107,7 @@ class ContactMessageSchema(Schema):
     name = fields.String(required=True, validate=Length(min=1, max=100))
     email = fields.Email(required=True, validate=Email())
     phone = fields.String(allow_none=True, validate=Length(max=20))
+    subject = fields.String(allow_none=True, validate=Length(max=200))
     message = fields.String(required=True, validate=Length(min=1))
     property_id = fields.Integer(allow_none=True)
     property_title = fields.String(dump_only=True)

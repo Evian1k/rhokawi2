@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [properties, setProperties] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsTotalPages, setContactsTotalPages] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -80,11 +82,13 @@ const Dashboard = () => {
     }
   };
 
-  const loadContacts = async () => {
+  const loadContacts = async (page = 1) => {
     try {
-      const response = await apiService.getContactMessages();
+      const response = await apiService.getContactMessages({ page, per_page: 10 });
       if (response.data) {
-        setContacts(response.data.slice(0, 5) || []); // Show latest 5
+        setContacts(response.data.messages || []);
+        setContactsTotalPages(response.data.pagination?.pages || 1);
+        setContactsPage(page);
       }
     } catch (error) {
       console.error('Failed to load contacts:', error);
@@ -482,8 +486,7 @@ const Dashboard = () => {
           {/* Contacts Tab */}
           {activeTab === 'contacts' && (
             <div>
-              <h2 className="text-xl font-semibold mb-6">Recent Contact Messages</h2>
-              
+              <h2 className="text-xl font-semibold mb-6">Contact Messages</h2>
               {contacts.length === 0 ? (
                 <Card>
                   <CardContent className="p-12 text-center">
@@ -493,30 +496,50 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-4">
-                  {contacts.map((contact) => (
-                    <Card key={contact.id}>
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="font-semibold">{contact.name}</h3>
-                            <p className="text-gray-600">{contact.email}</p>
-                            {contact.phone && <p className="text-gray-600">{contact.phone}</p>}
+                <>
+                  <div className="space-y-4">
+                    {contacts.map((contact) => (
+                      <Card key={contact.id}>
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h3 className="font-semibold">{contact.name}</h3>
+                              <p className="text-gray-600">{contact.email}</p>
+                              {contact.phone && <p className="text-gray-600">{contact.phone}</p>}
+                              {contact.subject && <p className="text-gray-800 font-semibold">Subject: {contact.subject}</p>}
+                            </div>
+                            <Badge variant="secondary">
+                              {new Date(contact.created_at).toLocaleDateString()}
+                            </Badge>
                           </div>
-                          <Badge variant="secondary">
-                            {new Date(contact.created_at).toLocaleDateString()}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-700 mb-4">{contact.message}</p>
-                        {contact.property_title && (
-                          <p className="text-sm text-gray-500">
-                            Regarding: <span className="font-medium">{contact.property_title}</span>
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                          <p className="text-gray-700 mb-4">{contact.message}</p>
+                          {contact.property_title && (
+                            <p className="text-sm text-gray-500">
+                              Regarding: <span className="font-medium">{contact.property_title}</span>
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center mt-6">
+                    <Button
+                      variant="outline"
+                      disabled={contactsPage <= 1}
+                      onClick={() => loadContacts(contactsPage - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <span>Page {contactsPage} of {contactsTotalPages}</span>
+                    <Button
+                      variant="outline"
+                      disabled={contactsPage >= contactsTotalPages}
+                      onClick={() => loadContacts(contactsPage + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}
