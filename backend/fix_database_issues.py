@@ -34,12 +34,9 @@ def fix_database():
                 square_feet=1500,
                 property_type="house",
                 status="available",
+                location="Sample City, SC 12345",
                 address="123 Sample Street",
-                city="Sample City", 
-                state="SC",
-                zip_code="12345",
-                is_verified=True,  # Make it verified so it shows up in public searches
-                is_featured=False
+                is_verified=True  # Make it verified so it shows up in public searches
             )
             
             db.session.add(new_property)
