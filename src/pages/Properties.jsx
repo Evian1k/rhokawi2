@@ -1,79 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import PropertyFilters from '@/components/properties/PropertyFilters';
 import PropertyGrid from '@/components/properties/PropertyGrid';
 import Pagination from '@/components/properties/Pagination';
 import NoPropertiesFound from '@/components/properties/NoPropertiesFound';
+import apiService from '@/lib/api';
 
 const Properties = () => {
   const [properties, setProperties] = useState([]);
-  const [filteredProperties, setFilteredProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     searchTerm: '',
     priceRange: '',
     propertyType: '',
     location: '',
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const propertiesPerPage = 9;
+  const [pagination, setPagination] = useState({
+    page: 1,
+    per_page: 9,
+    total: 0,
+    pages: 1,
+    has_next: false,
+    has_prev: false,
+  });
 
-  const sampleProperties = [
-    { id: 1, title: 'Modern Villa in Karen', price: 25000000, location: 'Karen, Nairobi', type: 'Villa', bedrooms: 4, bathrooms: 3, area: 350, featured: true, image: 'Modern luxury villa with swimming pool and garden', description: 'Stunning modern villa with premium finishes, swimming pool, and landscaped garden.' },
-    { id: 2, title: 'Executive Apartment', price: 8500000, location: 'Westlands, Nairobi', type: 'Apartment', bedrooms: 3, bathrooms: 2, area: 180, featured: true, image: 'Executive apartment with city view and modern amenities', description: 'Luxurious apartment with panoramic city views and modern amenities.' },
-    { id: 3, title: 'Family Home in Runda', price: 18000000, location: 'Runda, Nairobi', type: 'House', bedrooms: 5, bathrooms: 4, area: 280, featured: false, image: 'Spacious family home with large garden and garage', description: 'Perfect family home with spacious rooms and beautiful garden.' },
-    { id: 4, title: 'Penthouse in Kilimani', price: 15000000, location: 'Kilimani, Nairobi', type: 'Penthouse', bedrooms: 3, bathrooms: 3, area: 220, featured: false, image: 'Luxury penthouse with rooftop terrace and city views', description: 'Exclusive penthouse with rooftop terrace and stunning city views.' },
-    { id: 5, title: 'Townhouse in Lavington', price: 12000000, location: 'Lavington, Nairobi', type: 'Townhouse', bedrooms: 4, bathrooms: 3, area: 200, featured: false, image: 'Modern townhouse with private garden and parking', description: 'Contemporary townhouse in a secure gated community.' },
-    { id: 6, title: 'Bungalow in Muthaiga', price: 35000000, location: 'Muthaiga, Nairobi', type: 'Bungalow', bedrooms: 6, bathrooms: 5, area: 400, featured: true, image: 'Elegant bungalow with mature gardens and swimming pool', description: 'Elegant bungalow on a large plot with mature gardens.' },
-    { id: 7, title: 'Studio Apartment', price: 3500000, location: 'Kileleshwa, Nairobi', type: 'Studio', bedrooms: 1, bathrooms: 1, area: 45, featured: false, image: 'Compact studio apartment with modern design', description: 'Perfect starter home or investment property.' },
-    { id: 8, title: 'Duplex in Riverside', price: 22000000, location: 'Riverside, Nairobi', type: 'Duplex', bedrooms: 4, bathrooms: 4, area: 300, featured: false, image: 'Spacious duplex with modern amenities and garden', description: 'Spacious duplex with contemporary design and amenities.' },
-    { id: 9, title: 'Mansion in Gigiri', price: 45000000, location: 'Gigiri, Nairobi', type: 'Mansion', bedrooms: 7, bathrooms: 6, area: 500, featured: true, image: 'Luxury mansion with extensive grounds and facilities', description: 'Magnificent mansion with extensive grounds and luxury facilities.' }
-  ];
+  // Fetch properties from API
+  const fetchProperties = async (searchParams = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = {
+        page: pagination.page,
+        per_page: pagination.per_page,
+        status: 'available',
+        ...searchParams,
+      };
 
-  useEffect(() => {
-    const savedProperties = localStorage.getItem('properties');
-    const initialProperties = savedProperties ? JSON.parse(savedProperties) : sampleProperties;
-    setProperties(initialProperties);
-    setFilteredProperties(initialProperties);
-    if (!savedProperties) {
-      localStorage.setItem('properties', JSON.stringify(sampleProperties));
+      const response = await apiService.searchProperties(params);
+      
+      if (response.data) {
+        setProperties(response.data.properties || []);
+        setPagination(response.data.pagination || pagination);
+      }
+    } catch (err) {
+      console.error('Failed to fetch properties:', err);
+      setError(err.message || 'Failed to load properties');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchProperties();
   }, []);
 
+  // Handle filter changes
   useEffect(() => {
-    let filtered = properties;
-    const { searchTerm, priceRange, propertyType, location } = filters;
-
-    if (searchTerm) {
-      filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.type.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    const searchParams = {};
+    
+    if (filters.searchTerm) {
+      searchParams.location = filters.searchTerm;
     }
-    if (priceRange) {
-      const [min, max] = priceRange.split('-').map(Number);
-      filtered = filtered.filter(p => {
-        if (max) return p.price >= min && p.price <= max;
-        return p.price >= min;
-      });
+    if (filters.location) {
+      searchParams.location = filters.location;
     }
-    if (propertyType) {
-      filtered = filtered.filter(p => p.type === propertyType);
+    if (filters.propertyType) {
+      searchParams.property_type = filters.propertyType;
     }
-    if (location) {
-      filtered = filtered.filter(p => p.location.toLowerCase().includes(location.toLowerCase()));
+    if (filters.priceRange) {
+      const [minPrice, maxPrice] = filters.priceRange.split('-').map(p => p.replace(/[^0-9]/g, ''));
+      if (minPrice) searchParams.min_price = minPrice;
+      if (maxPrice) searchParams.max_price = maxPrice;
     }
 
-    setFilteredProperties(filtered);
-    setCurrentPage(1);
-  }, [filters, properties]);
+    fetchProperties(searchParams);
+  }, [filters]);
 
-  const indexOfLastProperty = currentPage * propertiesPerPage;
-  const indexOfFirstProperty = indexOfLastProperty - propertiesPerPage;
-  const currentProperties = filteredProperties.slice(indexOfFirstProperty, indexOfLastProperty);
-  const totalPages = Math.ceil(filteredProperties.length / propertiesPerPage);
+  // Handle pagination
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+    fetchProperties();
+  };
 
   return (
     <>
@@ -102,18 +114,34 @@ const Properties = () => {
           </div>
         </section>
 
-        <PropertyFilters filters={filters} setFilters={setFilters} resultsCount={filteredProperties.length} />
+        <PropertyFilters filters={filters} setFilters={setFilters} resultsCount={pagination.total} />
 
         <section className="section-padding bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {currentProperties.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+                <span className="ml-2 text-lg">Loading properties...</span>
+              </div>
+            ) : error ? (
+              <div className="text-center py-20">
+                <div className="text-red-600 text-lg mb-4">Failed to load properties</div>
+                <div className="text-muted-foreground mb-6">{error}</div>
+                <button 
+                  onClick={() => fetchProperties()}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : properties.length > 0 ? (
               <>
-                <PropertyGrid properties={currentProperties} />
-                {totalPages > 1 && (
+                <PropertyGrid properties={properties} />
+                {pagination.pages > 1 && (
                   <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
+                    currentPage={pagination.page}
+                    totalPages={pagination.pages}
+                    onPageChange={handlePageChange}
                   />
                 )}
               </>

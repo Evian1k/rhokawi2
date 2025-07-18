@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import apiService from '@/lib/api';
 
 const AuthContext = createContext();
 
@@ -16,40 +17,71 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('userData');
-    
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('authToken');
+      
+      if (token) {
+        try {
+          // Verify token with backend and get current user
+          const response = await apiService.getCurrentUser();
+          if (response.data) {
+            setUser(response.data);
+          }
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          // Clear invalid token
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
-  const login = (email, password) => {
-    // Mock authentication - replace with real API call
-    if (email === 'admin@rhokawiproperties.com' && password === 'admin123') {
-      const userData = {
-        id: 1,
-        email: 'admin@rhokawiproperties.com',
-        name: 'Admin User',
-        role: 'admin'
-      };
+  const login = async (username, password) => {
+    try {
+      const response = await apiService.login(username, password);
       
-      const token = 'mock-jwt-token-' + Date.now();
+      if (response.data && response.data.access_token) {
+        const { access_token, user: userData } = response.data;
+        
+        // Store token and user data
+        localStorage.setItem('authToken', access_token);
+        localStorage.setItem('userData', JSON.stringify(userData));
+        setUser(userData);
+        
+        return { success: true, user: userData };
+      }
       
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(userData));
-      setUser(userData);
-      
-      return { success: true };
+      return { success: false, error: response.message || 'Login failed' };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: error.message || 'Login failed' };
     }
-    
-    return { success: false, error: 'Invalid credentials' };
+  };
+
+  const register = async (userData) => {
+    try {
+      const response = await apiService.register(userData);
+      
+      if (response.data && response.data.access_token) {
+        const { access_token, user } = response.data;
+        
+        // Store token and user data
+        localStorage.setItem('authToken', access_token);
+        localStorage.setItem('userData', JSON.stringify(user));
+        setUser(user);
+        
+        return { success: true, user };
+      }
+      
+      return { success: false, error: response.message || 'Registration failed' };
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, error: error.message || 'Registration failed' };
+    }
   };
 
   const logout = () => {
@@ -58,11 +90,39 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshToken = async () => {
+    try {
+      const response = await apiService.refreshToken();
+      if (response.data && response.data.access_token) {
+        localStorage.setItem('authToken', response.data.access_token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      logout();
+      return false;
+    }
+  };
+
+  const updateUser = (updatedUserData) => {
+    const newUserData = { ...user, ...updatedUserData };
+    setUser(newUserData);
+    localStorage.setItem('userData', JSON.stringify(newUserData));
+  };
+
   const value = {
     user,
     login,
+    register,
     logout,
-    loading
+    refreshToken,
+    updateUser,
+    loading,
+    isAdmin: user?.role === 'admin',
+    isAgent: user?.role === 'agent',
+    isClient: user?.role === 'client',
+    canManageProperties: user?.role === 'admin' || user?.role === 'agent',
   };
 
   return (

@@ -16,7 +16,7 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -34,13 +34,13 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    try{
-      const result = login(formData.email, formData.password);
+    try {
+      const result = await login(formData.username, formData.password);
       
       if (result.success) {
         toast({
           title: "Login Successful!",
-          description: "Welcome back! Redirecting to dashboard...",
+          description: `Welcome back, ${result.user.username}! Redirecting to dashboard...`,
         });
         navigate('/dashboard');
       } else {
@@ -92,17 +92,17 @@ const Login = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="username">Username</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
+                      id="username"
+                      name="username"
+                      type="text"
+                      value={formData.username}
                       onChange={handleInputChange}
                       required
-                      placeholder="admin@rhokawiproperties.com"
+                      placeholder="admin, agent1, or client1"
                       className="pl-10"
                     />
                   </div>
@@ -155,7 +155,7 @@ const Login = () => {
               <div className="mt-6 p-4 bg-muted rounded-lg">
                 <h3 className="font-semibold mb-2">Demo Credentials:</h3>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Email:</strong> admin@rhokawiproperties.com<br />
+                  <strong>Username:</strong> admin, agent1, or client1<br />
                   <strong>Password:</strong> admin123
                 </p>
               </div>

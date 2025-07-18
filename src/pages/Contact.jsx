@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import apiService from '@/lib/api';
 
 const Contact = () => {
   const { toast } = useToast();
@@ -60,34 +61,41 @@ const Contact = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      // Save to localStorage for demo purposes
-      const submissions = JSON.parse(localStorage.getItem('contactSubmissions') || '[]');
-      const newSubmission = {
-        ...formData,
-        id: Date.now(),
-        timestamp: new Date().toISOString()
+    try {
+      // Send message to API
+      const messageData = {
+        name: formData.name,
+        email: formData.email,
+        message: `Subject: ${formData.subject}\n\nPhone: ${formData.phone}\n\nMessage:\n${formData.message}`
       };
-      submissions.push(newSubmission);
-      localStorage.setItem('contactSubmissions', JSON.stringify(submissions));
 
+      const response = await apiService.sendContactMessage(messageData);
+
+      if (response.message) {
+        toast({
+          title: "Message Sent Successfully!",
+          description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+        });
+
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: ''
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
       toast({
-        title: "Message Sent Successfully!",
-        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+        title: "Failed to Send Message",
+        description: error.message || "Please try again later or contact us directly.",
+        variant: "destructive",
       });
-
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: ''
-      });
-
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
   return (
