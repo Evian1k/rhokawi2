@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { Plus, Home, Star, TrendingUp, Eye, Users, CheckCircle, XCircle, UserPlus, Settings, MessageSquare } from 'lucide-react';
+import { Plus, Home, Star, TrendingUp, Eye, Users, CheckCircle, XCircle, UserPlus, Settings, MessageSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -84,10 +84,28 @@ const Dashboard = () => {
     try {
       const response = await apiService.getContactMessages();
       if (response.data) {
-        setContacts(response.data.slice(0, 5) || []); // Show latest 5
+        setContacts(response.data || []); // Show all contacts for admin
       }
     } catch (error) {
       console.error('Failed to load contacts:', error);
+    }
+  };
+
+  const handleUpdateContactStatus = async (contactId, status) => {
+    try {
+      await apiService.updateMessageStatus(contactId, status);
+      // Reload contacts to reflect the status change
+      await loadContacts();
+      toast({
+        title: "Status updated",
+        description: `Contact message marked as ${status}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating status",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -482,37 +500,102 @@ const Dashboard = () => {
           {/* Contacts Tab */}
           {activeTab === 'contacts' && (
             <div>
-              <h2 className="text-xl font-semibold mb-6">Recent Contact Messages</h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Contact Messages</h2>
+                <Button
+                  onClick={() => loadContacts()}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
               
               {contacts.length === 0 ? (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
-                    <p className="text-gray-600">Contact messages will appear here</p>
+                    <p className="text-gray-600">Contact messages will appear here when customers send inquiries</p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-4">
                   {contacts.map((contact) => (
-                    <Card key={contact.id}>
+                    <Card key={contact.id} className={contact.status === 'unread' ? 'border-l-4 border-l-red-500' : ''}>
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="font-semibold">{contact.name}</h3>
-                            <p className="text-gray-600">{contact.email}</p>
-                            {contact.phone && <p className="text-gray-600">{contact.phone}</p>}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-lg">{contact.name}</h3>
+                              <Badge variant={contact.status === 'unread' ? 'destructive' : contact.status === 'read' ? 'secondary' : 'default'}>
+                                {contact.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              <p><strong>Email:</strong> {contact.email}</p>
+                              {contact.phone && <p><strong>Phone:</strong> {contact.phone}</p>}
+                              {contact.user_name && <p><strong>User:</strong> {contact.user_name}</p>}
+                            </div>
                           </div>
-                          <Badge variant="secondary">
-                            {new Date(contact.created_at).toLocaleDateString()}
-                          </Badge>
+                          <div className="text-right">
+                            <Badge variant="secondary">
+                              {new Date(contact.created_at).toLocaleDateString()}
+                            </Badge>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(contact.created_at).toLocaleTimeString()}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-gray-700 mb-4">{contact.message}</p>
+                        
+                        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                          <h4 className="font-medium mb-2">Message:</h4>
+                          <p className="text-gray-700 whitespace-pre-wrap">{contact.message}</p>
+                        </div>
+                        
                         {contact.property_title && (
-                          <p className="text-sm text-gray-500">
-                            Regarding: <span className="font-medium">{contact.property_title}</span>
-                          </p>
+                          <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                            <p className="text-sm text-blue-800">
+                              <strong>Regarding Property:</strong> {contact.property_title}
+                            </p>
+                          </div>
                         )}
+
+                        <div className="flex gap-2 pt-4 border-t">
+                          {contact.status === 'unread' && (
+                            <Button
+                              onClick={() => handleUpdateContactStatus(contact.id, 'read')}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Mark as Read
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleUpdateContactStatus(contact.id, 'replied')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Mark as Replied
+                          </Button>
+                          <Button
+                            onClick={() => window.open(`mailto:${contact.email}?subject=Re: Your inquiry&body=Hi ${contact.name},%0D%0A%0D%0AThank you for your inquiry...`)}
+                            variant="default"
+                            size="sm"
+                          >
+                            Reply via Email
+                          </Button>
+                          {contact.phone && (
+                            <Button
+                              onClick={() => window.open(`tel:${contact.phone}`)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Call
+                            </Button>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}

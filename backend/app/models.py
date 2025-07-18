@@ -159,11 +159,13 @@ class ContactMessage(db.Model):
     phone = db.Column(db.String(20), nullable=True)
     message = db.Column(db.Text, nullable=False)
     property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     status = db.Column(db.String(20), default='unread', nullable=False)  # unread, read, replied
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
     property = db.relationship('Property', backref=db.backref('inquiries', lazy=True))
+    user = db.relationship('User', backref=db.backref('contact_messages', lazy=True))
     
     def to_dict(self):
         """Convert contact message instance to dictionary."""
@@ -175,6 +177,8 @@ class ContactMessage(db.Model):
             'message': self.message,
             'property_id': self.property_id,
             'property_title': self.property.title if self.property else None,
+            'user_id': self.user_id,
+            'user_name': f"{self.user.first_name} {self.user.last_name}" if self.user else None,
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
