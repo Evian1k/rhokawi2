@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -94,14 +93,16 @@ const Login = () => {
             </CardHeader>
             <CardContent>
               {/* Credential Hint */}
-              <Alert className="mb-6 bg-blue-900/20 border-blue-700">
-                <Info className="h-4 w-4" />
-                <AlertDescription className="text-blue-200">
-                  <strong>Test Credentials:</strong><br />
-                  Username: <code className="bg-gray-800 px-1 rounded">admin</code><br />
-                  Password: <code className="bg-gray-800 px-1 rounded">admin123</code>
-                </AlertDescription>
-              </Alert>
+              <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-blue-200 text-sm">
+                    <strong>Test Credentials:</strong><br />
+                    Username: <code className="bg-gray-800 px-2 py-1 rounded text-xs">admin</code><br />
+                    Password: <code className="bg-gray-800 px-2 py-1 rounded text-xs">admin123</code>
+                  </div>
+                </div>
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">

@@ -13,6 +13,25 @@ from app.utils import validate_json, success_response, handle_error
 auth_bp = Blueprint('auth', __name__)
 
 
+@auth_bp.route('/login', methods=['GET'])
+def login_info():
+    """
+    Login endpoint info for GET requests.
+    """
+    return jsonify({
+        'message': 'Login endpoint requires POST method',
+        'method': 'POST',
+        'endpoint': '/api/auth/login',
+        'expected_data': {
+            'username': 'string',
+            'password': 'string'
+        },
+        'example': {
+            'username': 'admin',
+            'password': 'admin123'
+        }
+    }), 405
+
 
 @auth_bp.route('/login', methods=['POST'])
 @validate_json(user_login_schema)
@@ -99,54 +118,60 @@ def add_admin():
         # Validate required fields
         if not data or not data.get('username') or not data.get('email') or not data.get('password'):
             return handle_error(
-                Exception('Missing fields'),
+                Exception('Missing required fields'),
                 'Username, email, and password are required',
                 400
             )
         
-        # Create new admin user (not main admin)
+        # Check if username or email already exists
+        existing_user = User.query.filter(
+            (User.username == data['username']) | (User.email == data['email'])
+        ).first()
+        
+        if existing_user:
+            return handle_error(
+                Exception('User already exists'),
+                'Username or email already exists',
+                409
+            )
+        
+        # Create new admin user
         new_admin = User(
             username=data['username'],
             email=data['email'],
             password=data['password'],
             first_name=data.get('first_name'),
             last_name=data.get('last_name'),
-            is_main_admin=False  # Added admins are never main admin
+            is_main_admin=False  # New admins are not main admins
         )
         
-        # Save user to database
         db.session.add(new_admin)
         db.session.commit()
         
         return success_response(
-            message='Admin user added successfully',
+            message='Admin user created successfully',
             data={
                 'user': user_schema.dump(new_admin)
-            },
-            status_code=201
+            }
         )
         
-    except IntegrityError as e:
+    except IntegrityError:
         db.session.rollback()
-        if 'username' in str(e):
-            message = 'Username already exists'
-        elif 'email' in str(e):
-            message = 'Email already exists'
-        else:
-            message = 'User with this information already exists'
-        
-        return handle_error(e, message, 409)
-    
+        return handle_error(
+            Exception('Database integrity error'),
+            'Username or email already exists',
+            409
+        )
     except Exception as e:
         db.session.rollback()
-        return handle_error(e, 'Failed to add admin user', 500)
+        return handle_error(e, 'Failed to create admin user', 500)
 
 
 @auth_bp.route('/admins', methods=['GET'])
 @jwt_required()
 def get_admins():
     """
-    Get list of all admin users (only main admin can access).
+    Get all admin users (only main admin can do this).
     """
     try:
         current_user_id = get_jwt_identity()
@@ -155,7 +180,7 @@ def get_admins():
         if not current_user or not current_user.can_add_admins():
             return handle_error(
                 Exception('Unauthorized'),
-                'Only the main admin can view admin list',
+                'Only the main admin can view all admins',
                 403
             )
         
@@ -164,19 +189,19 @@ def get_admins():
         return success_response(
             message='Admin users retrieved successfully',
             data={
-                'admins': [user_schema.dump(admin) for admin in admins]
+                'admins': user_schema.dump(admins, many=True)
             }
         )
         
     except Exception as e:
-        return handle_error(e, 'Failed to get admin users', 500)
+        return handle_error(e, 'Failed to retrieve admin users', 500)
 
 
 @auth_bp.route('/admins/<int:admin_id>', methods=['DELETE'])
 @jwt_required()
 def delete_admin(admin_id):
     """
-    Delete an admin user (only main admin can do this, cannot delete main admin).
+    Delete an admin user (only main admin can do this).
     """
     try:
         current_user_id = get_jwt_identity()
@@ -185,38 +210,43 @@ def delete_admin(admin_id):
         if not current_user or not current_user.can_add_admins():
             return handle_error(
                 Exception('Unauthorized'),
-                'Only the main admin can delete admin users',
+                'Only the main admin can delete other admins',
                 403
+            )
+        
+        # Prevent deleting self
+        if current_user_id == admin_id:
+            return handle_error(
+                Exception('Cannot delete self'),
+                'You cannot delete your own admin account',
+                400
             )
         
         admin_to_delete = User.query.get(admin_id)
         
         if not admin_to_delete:
             return handle_error(
-                Exception('Not found'),
+                Exception('Admin not found'),
                 'Admin user not found',
                 404
             )
         
+        # Prevent deleting other main admins
         if admin_to_delete.is_main_admin:
             return handle_error(
                 Exception('Cannot delete main admin'),
-                'The main admin cannot be deleted',
-                403
-            )
-        
-        if admin_to_delete.id == current_user.id:
-            return handle_error(
-                Exception('Cannot delete self'),
-                'You cannot delete your own account',
-                403
+                'Cannot delete main admin accounts',
+                400
             )
         
         db.session.delete(admin_to_delete)
         db.session.commit()
         
         return success_response(
-            message='Admin user deleted successfully'
+            message='Admin user deleted successfully',
+            data={
+                'deleted_admin': user_schema.dump(admin_to_delete)
+            }
         )
         
     except Exception as e:
@@ -224,58 +254,69 @@ def delete_admin(admin_id):
         return handle_error(e, 'Failed to delete admin user', 500)
 
 
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    """
+    Get current authenticated user information.
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user:
+            return handle_error(
+                Exception('User not found'),
+                'Current user not found',
+                404
+            )
+        
+        return success_response(
+            message='Current user retrieved successfully',
+            data=user_schema.dump(current_user)
+        )
+        
+    except Exception as e:
+        return handle_error(e, 'Failed to retrieve current user', 500)
+
+
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
-def refresh():
+def refresh_token():
     """
     Refresh access token using refresh token.
     """
     try:
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
+        current_user = User.query.get(current_user_id)
         
-        if not user or not user.is_active:
+        if not current_user or not current_user.is_active:
             return handle_error(
                 Exception('Invalid user'),
-                'Admin user not found or inactive',
-                404
+                'User not found or inactive',
+                401
             )
         
-        # Create new access token
-        access_token = create_access_token(identity=user.id)
+        new_access_token = create_access_token(identity=current_user_id)
         
         return success_response(
             message='Token refreshed successfully',
             data={
-                'access_token': access_token
+                'access_token': new_access_token
             }
         )
         
     except Exception as e:
-        return handle_error(e, 'Token refresh failed', 500)
+        return handle_error(e, 'Failed to refresh token', 500)
 
 
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
-def get_current_user():
+def logout():
     """
-    Get current admin user information.
+    Logout endpoint (token invalidation handled on frontend).
     """
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return handle_error(
-                Exception('User not found'),
-                'Admin user not found',
-                404
-            )
-        
-        return success_response(
-            message='Admin user information retrieved successfully',
-            data=user_schema.dump(user)
-        )
-        
-    except Exception as e:
-        return handle_error(e, 'Failed to get admin user information', 500)
+    return success_response(
+        message='Logout successful',
+        data={}
+    )
