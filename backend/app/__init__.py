@@ -2,7 +2,7 @@
 Flask application factory.
 """
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -51,6 +51,13 @@ def create_app(config_name=None):
     # Register blueprints
     from app.routes import register_routes
     register_routes(app)
+    
+    # Add static file serving for uploaded images
+    @app.route('/uploads/images/<path:filename>')
+    def serve_uploaded_image(filename):
+        """Serve uploaded images."""
+        upload_path = os.path.join(os.getcwd(), 'uploads', 'images')
+        return send_from_directory(upload_path, filename)
     
     # Create database tables
     with app.app_context():

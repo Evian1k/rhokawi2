@@ -3,6 +3,7 @@ Property management routes for real estate listings.
 """
 
 import json
+import os
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import and_, or_
@@ -14,7 +15,7 @@ from app.schemas import (
 )
 from app.utils import (
     validate_json, success_response, handle_error, 
-    paginate_query, agent_or_admin_required, create_property_search_query
+    paginate_query, admin_required, create_property_search_query
 )
 
 properties_bp = Blueprint('properties', __name__)
@@ -23,26 +24,39 @@ properties_bp = Blueprint('properties', __name__)
 @properties_bp.route('', methods=['GET'])
 def get_properties():
     """
-    Get all properties (with pagination and basic filtering).
+    Get all properties (public endpoint - shows verified properties to public).
     
     Query Parameters:
     - page: Page number (default: 1)
     - per_page: Items per page (default: 20, max: 100)
     - status: Filter by status (available, sold, pending)
-    - agent_id: Filter by agent ID
+    - show_all: If authenticated admin, can see all properties
     """
     try:
         # Get pagination parameters
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         status = request.args.get('status', 'available')
-        agent_id = request.args.get('agent_id', type=int)
+        show_all = request.args.get('show_all', 'false').lower() == 'true'
         
-        # Build query
+        # Build query - for public, only show verified properties
         query = Property.query.filter_by(status=status)
         
-        if agent_id:
-            query = query.filter_by(agent_id=agent_id)
+        # Check if this is an admin request for all properties
+        is_admin = False
+        try:
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            verify_jwt_in_request(optional=True)
+            current_user_id = get_jwt_identity()
+            if current_user_id:
+                current_user = User.query.get(current_user_id)
+                is_admin = current_user and current_user.is_admin
+        except:
+            pass
+        
+        # If not admin or not requesting all, only show verified properties
+        if not (is_admin and show_all):
+            query = query.filter_by(is_verified=True)
         
         query = query.order_by(Property.created_at.desc())
         
@@ -58,55 +72,50 @@ def get_properties():
         )
         
     except Exception as e:
-        return handle_error(e, 'Failed to retrieve properties', 500)
+        return handle_error(e, 'Failed to get properties', 500)
 
 
 @properties_bp.route('/search', methods=['GET'])
 def search_properties():
     """
-    Search properties with advanced filters.
-    
-    Query Parameters:
-    - location: Location search (partial match)
-    - property_type: Type of property
-    - min_price: Minimum price
-    - max_price: Maximum price
-    - bedrooms: Minimum number of bedrooms
-    - status: Property status (default: available)
-    - page: Page number (default: 1)
-    - per_page: Items per page (default: 20, max: 100)
+    Search properties with advanced filtering (public endpoint - only verified properties).
     """
     try:
-        # Validate search parameters
-        search_params = property_search_schema.load(request.args)
+        # Get search parameters from query string
+        search_params = request.args.to_dict()
+        
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
         
         # Build search query
         query = create_property_search_query(search_params)
         
+        # Only show verified properties to public
+        query = query.filter_by(is_verified=True)
+        
+        query = query.order_by(Property.created_at.desc())
+        
         # Execute paginated query
-        result = paginate_query(
-            query, 
-            search_params.get('page', 1), 
-            search_params.get('per_page', 20)
-        )
+        result = paginate_query(query, page, per_page)
         
         return success_response(
-            message='Property search completed',
+            message='Properties search completed',
             data={
                 'properties': properties_schema.dump(result['items']),
                 'pagination': result['pagination'],
-                'search_params': search_params
+                'search_criteria': search_params
             }
         )
         
     except Exception as e:
-        return handle_error(e, 'Failed to search properties', 500)
+        return handle_error(e, 'Property search failed', 500)
 
 
 @properties_bp.route('/<int:property_id>', methods=['GET'])
 def get_property(property_id):
     """
-    Get a specific property by ID.
+    Get a specific property by ID (public endpoint).
     """
     try:
         property = Property.query.get(property_id)
@@ -114,7 +123,27 @@ def get_property(property_id):
         if not property:
             return handle_error(
                 Exception('Property not found'),
-                f'Property with ID {property_id} not found',
+                'Property not found',
+                404
+            )
+        
+        # Check if admin is requesting or if property is verified
+        is_admin = False
+        try:
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            verify_jwt_in_request(optional=True)
+            current_user_id = get_jwt_identity()
+            if current_user_id:
+                current_user = User.query.get(current_user_id)
+                is_admin = current_user and current_user.is_admin
+        except:
+            pass
+        
+        # If not admin and property not verified, deny access
+        if not is_admin and not property.is_verified:
+            return handle_error(
+                Exception('Property not found'),
+                'Property not found',
                 404
             )
         
@@ -124,34 +153,26 @@ def get_property(property_id):
         )
         
     except Exception as e:
-        return handle_error(e, 'Failed to retrieve property', 500)
+        return handle_error(e, 'Failed to get property', 500)
 
 
 @properties_bp.route('', methods=['POST'])
-@agent_or_admin_required
+@jwt_required()
 @validate_json(property_create_schema)
 def create_property(validated_data):
     """
-    Create a new property (agent or admin only).
-    
-    Expected JSON:
-    {
-        "title": "string",
-        "description": "string",
-        "property_type": "house|apartment|condo|townhouse|land|commercial",
-        "location": "string",
-        "address": "string",
-        "price": decimal,
-        "bedrooms": integer,
-        "bathrooms": integer,
-        "square_feet": integer,
-        "lot_size": "string",
-        "year_built": integer,
-        "features": ["feature1", "feature2"]
-    }
+    Create a new property (admin only).
     """
     try:
         current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can create properties',
+                403
+            )
         
         # Create new property
         property = Property(
@@ -166,11 +187,13 @@ def create_property(validated_data):
             square_feet=validated_data.get('square_feet'),
             lot_size=validated_data.get('lot_size'),
             year_built=validated_data.get('year_built'),
+            status=validated_data.get('status', 'available'),
             features=json.dumps(validated_data.get('features', [])),
-            agent_id=current_user_id
+            images=json.dumps(validated_data.get('images', [])),
+            admin_id=current_user.id,
+            is_verified=False  # New properties start unverified
         )
         
-        # Save property to database
         db.session.add(property)
         db.session.commit()
         
@@ -186,41 +209,42 @@ def create_property(validated_data):
 
 
 @properties_bp.route('/<int:property_id>', methods=['PUT'])
-@agent_or_admin_required
+@jwt_required()
 @validate_json(property_update_schema)
 def update_property(property_id, validated_data):
     """
-    Update an existing property (agent or admin only).
-    Agent can only update their own properties, admin can update any.
+    Update a property (admin only).
     """
     try:
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        # Get the property
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can update properties',
+                403
+            )
+        
         property = Property.query.get(property_id)
         
         if not property:
             return handle_error(
                 Exception('Property not found'),
-                f'Property with ID {property_id} not found',
+                'Property not found',
                 404
-            )
-        
-        # Check permissions (agents can only update their own properties)
-        if not current_user.is_admin and property.agent_id != current_user_id:
-            return handle_error(
-                Exception('Forbidden'),
-                'You can only update your own properties',
-                403
             )
         
         # Update property fields
         for field, value in validated_data.items():
-            if field == 'features' and value is not None:
+            if field in ['features', 'images'] and value is not None:
                 setattr(property, field, json.dumps(value))
             elif value is not None:
                 setattr(property, field, value)
+        
+        # Mark as unverified if content changed (except for admin updating verification)
+        if 'is_verified' not in validated_data:
+            property.is_verified = False
         
         db.session.commit()
         
@@ -235,40 +259,46 @@ def update_property(property_id, validated_data):
 
 
 @properties_bp.route('/<int:property_id>', methods=['DELETE'])
-@agent_or_admin_required
+@jwt_required()
 def delete_property(property_id):
     """
-    Delete a property (agent or admin only).
-    Agent can only delete their own properties, admin can delete any.
+    Delete a property (admin only). This removes it from public view immediately.
     """
     try:
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        # Get the property
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can delete properties',
+                403
+            )
+        
         property = Property.query.get(property_id)
         
         if not property:
             return handle_error(
                 Exception('Property not found'),
-                f'Property with ID {property_id} not found',
+                'Property not found',
                 404
             )
         
-        # Check permissions (agents can only delete their own properties)
-        if not current_user.is_admin and property.agent_id != current_user_id:
-            return handle_error(
-                Exception('Forbidden'),
-                'You can only delete your own properties',
-                403
-            )
+        # Delete associated images from filesystem if any
+        if property.images:
+            try:
+                images = json.loads(property.images)
+                for image_url in images:
+                    # Clean up image files (implement based on your storage)
+                    pass
+            except:
+                pass
         
         db.session.delete(property)
         db.session.commit()
         
         return success_response(
-            message='Property deleted successfully',
-            status_code=204
+            message='Property deleted successfully'
         )
         
     except Exception as e:
@@ -276,111 +306,100 @@ def delete_property(property_id):
         return handle_error(e, 'Failed to delete property', 500)
 
 
-@properties_bp.route('/agent/<int:agent_id>', methods=['GET'])
-def get_agent_properties(agent_id):
+@properties_bp.route('/<int:property_id>/verify', methods=['PUT'])
+@jwt_required()
+def verify_property(property_id):
     """
-    Get all properties by a specific agent.
-    
-    Query Parameters:
-    - page: Page number (default: 1)
-    - per_page: Items per page (default: 20, max: 100)
-    - status: Filter by status
-    """
-    try:
-        # Check if agent exists
-        agent = User.query.get(agent_id)
-        if not agent or not agent.can_manage_properties():
-            return handle_error(
-                Exception('Agent not found'),
-                f'Agent with ID {agent_id} not found',
-                404
-            )
-        
-        # Get pagination parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        status = request.args.get('status', 'available')
-        
-        # Query agent's properties
-        query = Property.query.filter_by(agent_id=agent_id, status=status).order_by(Property.created_at.desc())
-        result = paginate_query(query, page, per_page)
-        
-        return success_response(
-            message=f'Properties by {agent.username} retrieved successfully',
-            data={
-                'properties': properties_schema.dump(result['items']),
-                'pagination': result['pagination'],
-                'agent': {
-                    'id': agent.id,
-                    'username': agent.username,
-                    'role': agent.role
-                }
-            }
-        )
-        
-    except Exception as e:
-        return handle_error(e, 'Failed to retrieve agent properties', 500)
-
-
-@properties_bp.route('/<int:property_id>/images', methods=['POST'])
-@agent_or_admin_required
-def add_property_images(property_id):
-    """
-    Add images to a property.
-    Images should be uploaded via the /upload endpoint first.
-    
-    Expected JSON:
-    {
-        "image_urls": ["url1", "url2", ...]
-    }
+    Verify/unverify a property for public display (admin only).
     """
     try:
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        # Get the property
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can verify properties',
+                403
+            )
+        
+        data = request.get_json()
+        is_verified = data.get('is_verified', False)
+        verification_notes = data.get('verification_notes', '')
+        
         property = Property.query.get(property_id)
         
         if not property:
             return handle_error(
                 Exception('Property not found'),
-                f'Property with ID {property_id} not found',
+                'Property not found',
                 404
             )
         
-        # Check permissions
-        if not current_user.is_admin and property.agent_id != current_user_id:
-            return handle_error(
-                Exception('Forbidden'),
-                'You can only update your own properties',
-                403
-            )
+        property.is_verified = is_verified
+        property.verification_notes = verification_notes
         
-        # Get JSON data
-        json_data = request.get_json()
-        if not json_data or 'image_urls' not in json_data:
-            return handle_error(
-                Exception('Bad Request'),
-                'image_urls array is required',
-                400
-            )
-        
-        # Get existing images
-        existing_images = json.loads(property.images) if property.images else []
-        
-        # Add new images
-        new_images = json_data['image_urls']
-        all_images = existing_images + new_images
-        
-        # Update property
-        property.images = json.dumps(all_images)
         db.session.commit()
         
         return success_response(
-            message='Images added successfully',
+            message=f'Property {"verified" if is_verified else "unverified"} successfully',
             data=property_schema.dump(property)
         )
         
     except Exception as e:
         db.session.rollback()
-        return handle_error(e, 'Failed to add images', 500)
+        return handle_error(e, 'Failed to verify property', 500)
+
+
+@properties_bp.route('/<int:property_id>/images', methods=['POST'])
+@jwt_required()
+def add_property_images(property_id):
+    """
+    Add images to a property (admin only).
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can add property images',
+                403
+            )
+        
+        property = Property.query.get(property_id)
+        
+        if not property:
+            return handle_error(
+                Exception('Property not found'),
+                'Property not found',
+                404
+            )
+        
+        data = request.get_json()
+        new_image_urls = data.get('image_urls', [])
+        
+        # Get existing images
+        try:
+            existing_images = json.loads(property.images) if property.images else []
+        except:
+            existing_images = []
+        
+        # Add new images
+        all_images = existing_images + new_image_urls
+        property.images = json.dumps(all_images)
+        
+        # Mark as unverified when images change
+        property.is_verified = False
+        
+        db.session.commit()
+        
+        return success_response(
+            message='Images added to property successfully',
+            data=property_schema.dump(property)
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, 'Failed to add property images', 500)

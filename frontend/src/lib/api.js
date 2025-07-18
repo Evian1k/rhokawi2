@@ -210,6 +210,13 @@ class ApiService {
     }
   }
 
+  async deleteFile(fileData) {
+    return this.request('/upload/delete', {
+      method: 'POST',
+      body: JSON.stringify(fileData),
+    });
+  }
+
   // Health check
   async healthCheck() {
     return this.request('/');
@@ -248,6 +255,7 @@ export const {
   deleteContactMessage,
   uploadFile,
   uploadMultipleFiles,
+  deleteFile,
   healthCheck,
   getApiInfo,
 } = apiService;

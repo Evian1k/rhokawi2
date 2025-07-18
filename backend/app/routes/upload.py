@@ -3,78 +3,116 @@ File upload routes for handling image uploads.
 """
 
 import os
-from flask import Blueprint, request, send_from_directory, current_app
-from flask_jwt_extended import jwt_required
-from app.utils import success_response, handle_error, save_uploaded_file, allowed_file
+import uuid
+from werkzeug.utils import secure_filename
+from flask import Blueprint, request, jsonify, current_app
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.models import User
+from app.utils import success_response, handle_error
 
 upload_bp = Blueprint('upload', __name__)
 
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+# Maximum file size (16MB)
+MAX_FILE_SIZE = 16 * 1024 * 1024
+
+def allowed_file(filename):
+    """Check if file extension is allowed."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def create_upload_folder():
+    """Create upload folder if it doesn't exist."""
+    upload_folder = os.path.join(os.getcwd(), 'uploads', 'images')
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+    return upload_folder
 
 @upload_bp.route('', methods=['POST'])
 @jwt_required()
 def upload_file():
     """
-    Upload a file (image).
+    Upload a single image file (admin only).
     
-    Expected: multipart/form-data with 'file' field
+    Returns:
+    {
+        "data": {
+            "url": "uploads/images/filename.jpg",
+            "filename": "original_filename.jpg",
+            "size": 12345
+        }
+    }
     """
     try:
-        # Check if file is in request
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can upload files',
+                403
+            )
+        
+        # Check if file is present
         if 'file' not in request.files:
             return handle_error(
                 Exception('No file provided'),
-                'No file field in request',
+                'No file provided in request',
                 400
             )
         
         file = request.files['file']
         
-        # Check if file was selected
+        # Check if file is selected
         if file.filename == '':
             return handle_error(
                 Exception('No file selected'),
-                'No file selected for upload',
+                'No file selected',
                 400
             )
         
-        # Check file type
+        # Check file size
+        if len(file.read()) > MAX_FILE_SIZE:
+            return handle_error(
+                Exception('File too large'),
+                f'File size exceeds {MAX_FILE_SIZE / (1024*1024)}MB limit',
+                400
+            )
+        
+        # Reset file pointer
+        file.seek(0)
+        
+        # Validate file type
         if not allowed_file(file.filename):
             return handle_error(
                 Exception('Invalid file type'),
-                'File type not allowed. Only PNG, JPG, JPEG, GIF, and WEBP files are allowed.',
+                'Only image files (PNG, JPG, JPEG, GIF, WebP) are allowed',
                 400
             )
         
-        # Check file size (16MB max)
-        file.seek(0, os.SEEK_END)
-        file_size = file.tell()
-        file.seek(0)  # Reset file pointer
+        # Create upload folder
+        upload_folder = create_upload_folder()
         
-        if file_size > 16 * 1024 * 1024:  # 16MB
-            return handle_error(
-                Exception('File too large'),
-                'File size exceeds 16MB limit',
-                400
-            )
+        # Generate unique filename
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
         
         # Save file
-        file_url = save_uploaded_file(file)
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
         
-        if not file_url:
-            return handle_error(
-                Exception('Upload failed'),
-                'Failed to save uploaded file',
-                500
-            )
+        # Create URL path (relative to static serving)
+        file_url = f"uploads/images/{unique_filename}"
         
         return success_response(
             message='File uploaded successfully',
             data={
-                'file_url': file_url,
+                'url': file_url,
                 'filename': file.filename,
-                'size': file_size
-            },
-            status_code=201
+                'size': os.path.getsize(file_path)
+            }
         )
         
     except Exception as e:
@@ -85,16 +123,38 @@ def upload_file():
 @jwt_required()
 def upload_multiple_files():
     """
-    Upload multiple files (images).
+    Upload multiple image files (admin only).
     
-    Expected: multipart/form-data with multiple 'files' fields
+    Returns:
+    {
+        "data": {
+            "files": [
+                {
+                    "url": "uploads/images/filename1.jpg",
+                    "filename": "original1.jpg",
+                    "size": 12345
+                },
+                ...
+            ]
+        }
+    }
     """
     try:
-        # Check if files are in request
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can upload files',
+                403
+            )
+        
+        # Check if files are present
         if 'files' not in request.files:
             return handle_error(
                 Exception('No files provided'),
-                'No files field in request',
+                'No files provided in request',
                 400
             )
         
@@ -103,100 +163,119 @@ def upload_multiple_files():
         if not files or len(files) == 0:
             return handle_error(
                 Exception('No files selected'),
-                'No files selected for upload',
+                'No files selected',
                 400
             )
         
-        # Limit number of files
-        if len(files) > 10:
-            return handle_error(
-                Exception('Too many files'),
-                'Maximum 10 files allowed per upload',
-                400
-            )
+        # Create upload folder
+        upload_folder = create_upload_folder()
         
         uploaded_files = []
-        total_size = 0
         
         for file in files:
-            # Skip empty files
             if file.filename == '':
                 continue
             
-            # Check file type
+            # Check file size
+            file_content = file.read()
+            if len(file_content) > MAX_FILE_SIZE:
+                continue  # Skip files that are too large
+            
+            # Reset file pointer
+            file.seek(0)
+            
+            # Validate file type
             if not allowed_file(file.filename):
-                return handle_error(
-                    Exception('Invalid file type'),
-                    f'File {file.filename} type not allowed. Only PNG, JPG, JPEG, GIF, and WEBP files are allowed.',
-                    400
-                )
+                continue  # Skip invalid file types
             
-            # Check individual file size
-            file.seek(0, os.SEEK_END)
-            file_size = file.tell()
-            file.seek(0)  # Reset file pointer
-            
-            if file_size > 16 * 1024 * 1024:  # 16MB per file
-                return handle_error(
-                    Exception('File too large'),
-                    f'File {file.filename} exceeds 16MB limit',
-                    400
-                )
-            
-            total_size += file_size
-            
-            # Check total upload size (100MB max)
-            if total_size > 100 * 1024 * 1024:
-                return handle_error(
-                    Exception('Total size too large'),
-                    'Total upload size exceeds 100MB limit',
-                    400
-                )
+            # Generate unique filename
+            file_extension = file.filename.rsplit('.', 1)[1].lower()
+            unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
             
             # Save file
-            file_url = save_uploaded_file(file)
+            file_path = os.path.join(upload_folder, unique_filename)
+            file.save(file_path)
             
-            if file_url:
-                uploaded_files.append({
-                    'file_url': file_url,
-                    'filename': file.filename,
-                    'size': file_size
-                })
-            else:
-                return handle_error(
-                    Exception('Upload failed'),
-                    f'Failed to save file {file.filename}',
-                    500
-                )
+            # Add to results
+            uploaded_files.append({
+                'url': f"uploads/images/{unique_filename}",
+                'filename': file.filename,
+                'size': os.path.getsize(file_path)
+            })
         
         if not uploaded_files:
             return handle_error(
                 Exception('No valid files'),
-                'No valid files were uploaded',
+                'No valid image files were uploaded',
                 400
             )
         
         return success_response(
-            message=f'{len(uploaded_files)} files uploaded successfully',
+            message=f'{len(uploaded_files)} file(s) uploaded successfully',
             data={
-                'files': uploaded_files,
-                'total_files': len(uploaded_files),
-                'total_size': total_size
-            },
-            status_code=201
+                'files': uploaded_files
+            }
         )
         
     except Exception as e:
         return handle_error(e, 'Failed to upload files', 500)
 
 
-@upload_bp.route('/<path:filename>')
-def serve_file(filename):
+@upload_bp.route('/delete', methods=['POST'])
+@jwt_required()
+def delete_file():
     """
-    Serve uploaded files.
+    Delete an uploaded file (admin only).
+    
+    Expected JSON:
+    {
+        "url": "uploads/images/filename.jpg"
+    }
     """
     try:
-        upload_path = os.path.join(current_app.root_path, '..', 'uploads')
-        return send_from_directory(upload_path, filename)
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only admins can delete files',
+                403
+            )
+        
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return handle_error(
+                Exception('Missing URL'),
+                'File URL is required',
+                400
+            )
+        
+        file_url = data['url']
+        
+        # Extract filename from URL
+        if file_url.startswith('uploads/images/'):
+            filename = file_url.replace('uploads/images/', '')
+            file_path = os.path.join(os.getcwd(), 'uploads', 'images', filename)
+            
+            # Check if file exists and delete it
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                return success_response(
+                    message='File deleted successfully'
+                )
+            else:
+                return handle_error(
+                    Exception('File not found'),
+                    'File not found on server',
+                    404
+                )
+        else:
+            return handle_error(
+                Exception('Invalid URL'),
+                'Invalid file URL format',
+                400
+            )
+        
     except Exception as e:
-        return handle_error(e, 'File not found', 404)
+        return handle_error(e, 'Failed to delete file', 500)
