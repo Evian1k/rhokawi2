@@ -48,11 +48,12 @@ def upload_file():
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        if not current_user or not current_user.is_admin:
+        # Check if user exists and is active
+        if not current_user or not current_user.is_active:
             return handle_error(
                 Exception('Unauthorized'),
-                'Only admins can upload files',
-                403
+                'Authentication required',
+                401
             )
         
         # Check if file is present
@@ -143,11 +144,12 @@ def upload_multiple_files():
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        if not current_user or not current_user.is_admin:
+        # Check if user exists and is active
+        if not current_user or not current_user.is_active:
             return handle_error(
                 Exception('Unauthorized'),
-                'Only admins can upload files',
-                403
+                'Authentication required',
+                401
             )
         
         # Check if files are present

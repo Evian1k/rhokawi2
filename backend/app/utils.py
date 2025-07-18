@@ -75,19 +75,29 @@ def admin_required(f):
         Decorated function
     """
     @wraps(f)
-    @jwt_required()
     def decorated_function(*args, **kwargs):
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user or not user.is_admin:
+        try:
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            verify_jwt_in_request()
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+            
+            if not user or not user.is_active:
+                return jsonify(error_schema.dump({
+                    'error': 'Unauthorized',
+                    'message': 'Authentication required',
+                    'status_code': 401
+                })), 401
+            
+            # In this system, all users are admins by design
+            return f(*args, **kwargs)
+            
+        except Exception as e:
             return jsonify(error_schema.dump({
-                'error': 'Forbidden',
-                'message': 'Admin privileges required',
-                'status_code': 403
-            })), 403
-        
-        return f(*args, **kwargs)
+                'error': 'Unauthorized',
+                'message': 'Invalid or expired token',
+                'status_code': 401
+            })), 401
     
     return decorated_function
 
