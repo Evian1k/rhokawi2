@@ -310,6 +310,68 @@ def refresh_token():
         return handle_error(e, 'Failed to refresh token', 500)
 
 
+@auth_bp.route('/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    """
+    Change password endpoint (only main admin can change their own password).
+    
+    Expected JSON:
+    {
+        "current_password": "string",
+        "new_password": "string"
+    }
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user:
+            return handle_error(
+                Exception('User not found'),
+                'Current user not found',
+                404
+            )
+        
+        # Only main admin can change their own password
+        if not current_user.is_main_admin:
+            return handle_error(
+                Exception('Unauthorized'),
+                'Only the main admin can change their password',
+                403
+            )
+        
+        data = request.get_json()
+        
+        if not data or not data.get('current_password') or not data.get('new_password'):
+            return handle_error(
+                Exception('Missing required fields'),
+                'Current password and new password are required',
+                400
+            )
+        
+        # Verify current password
+        if not current_user.check_password(data['current_password']):
+            return handle_error(
+                Exception('Invalid current password'),
+                'Current password is incorrect',
+                401
+            )
+        
+        # Update password
+        current_user.set_password(data['new_password'])
+        db.session.commit()
+        
+        return success_response(
+            message='Password changed successfully',
+            data={}
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, 'Failed to change password', 500)
+
+
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():

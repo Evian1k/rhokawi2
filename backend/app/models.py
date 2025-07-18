@@ -62,6 +62,10 @@ class User(db.Model):
         """Check if user can create/update/delete properties (all admins can)."""
         return True
     
+    def can_change_password(self):
+        """Check if user can change their own password (only main admin)."""
+        return self.is_main_admin
+    
     def to_dict(self):
         """Convert user instance to dictionary."""
         return {

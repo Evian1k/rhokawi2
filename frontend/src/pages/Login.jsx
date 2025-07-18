@@ -97,9 +97,10 @@ const Login = () => {
                 <div className="flex items-start space-x-3">
                   <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
                   <div className="text-blue-200 text-sm">
-                    <strong>Test Credentials:</strong><br />
-                    Username: <code className="bg-gray-800 px-2 py-1 rounded text-xs">admin</code><br />
-                    Password: <code className="bg-gray-800 px-2 py-1 rounded text-xs">admin123</code>
+                    <strong>Main Admin Credentials:</strong><br />
+                    Username: <code className="bg-gray-800 px-2 py-1 rounded text-xs">evian12k</code><br />
+                    Password: <code className="bg-gray-800 px-2 py-1 rounded text-xs">rhokawi25@12ktbl</code><br />
+                    <span className="text-xs text-blue-300 mt-2 block">Only the main admin can add other admins and change their password.</span>
                   </div>
                 </div>
               </div>
