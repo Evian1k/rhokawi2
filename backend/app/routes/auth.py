@@ -13,6 +13,7 @@ from app.utils import validate_json, success_response, handle_error
 auth_bp = Blueprint('auth', __name__)
 
 
+
 @auth_bp.route('/login', methods=['POST'])
 @validate_json(user_login_schema)
 def login(validated_data):

@@ -56,10 +56,12 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">R</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">Rhokawi Properties</span>
+            <img 
+              src="/rhokawi-logo.svg" 
+              alt="Rhokawi Properties Ltd" 
+              className="h-10 w-auto"
+            />
+            <span className="text-xl font-bold text-gray-900 hidden sm:block">Rhokawi Properties</span>
           </Link>
 
           {/* Desktop Navigation */}
