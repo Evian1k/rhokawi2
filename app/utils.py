@@ -9,8 +9,13 @@ from functools import wraps
 from flask import jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
+from werkzeug.utils import secure_filename
 from app.models import User
 from app.schemas import error_schema
+
+# Allowed file extensions for uploads
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 
 
 def validate_json(schema):
@@ -79,6 +84,34 @@ def admin_required(f):
             return jsonify(error_schema.dump({
                 'error': 'Forbidden',
                 'message': 'Admin privileges required',
+                'status_code': 403
+            })), 403
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+
+def agent_or_admin_required(f):
+    """
+    Decorator to require agent or admin privileges for a route.
+    
+    Args:
+        f: Function to decorate
+    
+    Returns:
+        Decorated function
+    """
+    @wraps(f)
+    @jwt_required()
+    def decorated_function(*args, **kwargs):
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user or not user.can_manage_properties():
+            return jsonify(error_schema.dump({
+                'error': 'Forbidden',
+                'message': 'Agent or admin privileges required',
                 'status_code': 403
             })), 403
         
@@ -224,3 +257,92 @@ def success_response(message, data=None, status_code=200):
         response_data['data'] = data
     
     return jsonify(response_data), status_code
+
+
+def allowed_file(filename):
+    """
+    Check if file extension is allowed.
+    
+    Args:
+        filename (str): Name of the file
+    
+    Returns:
+        bool: True if allowed, False otherwise
+    """
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def save_uploaded_file(file, upload_folder='uploads'):
+    """
+    Save uploaded file to disk.
+    
+    Args:
+        file: Flask uploaded file object
+        upload_folder (str): Directory to save file
+    
+    Returns:
+        str: URL path to saved file or None if error
+    """
+    if not file or file.filename == '':
+        return None
+    
+    if not allowed_file(file.filename):
+        return None
+    
+    # Create upload directory if it doesn't exist
+    upload_path = os.path.join(current_app.root_path, '..', upload_folder)
+    os.makedirs(upload_path, exist_ok=True)
+    
+    # Generate unique filename
+    filename = secure_filename(file.filename)
+    name, ext = os.path.splitext(filename)
+    unique_filename = f"{name}_{generate_random_string(8)}{ext}"
+    
+    file_path = os.path.join(upload_path, unique_filename)
+    
+    try:
+        file.save(file_path)
+        # Return URL path relative to app
+        return f"/{upload_folder}/{unique_filename}"
+    except Exception as e:
+        current_app.logger.error(f"Error saving file: {e}")
+        return None
+
+
+def create_property_search_query(query_params):
+    """
+    Build SQLAlchemy query for property search with filters.
+    
+    Args:
+        query_params (dict): Search parameters
+    
+    Returns:
+        SQLAlchemy query object
+    """
+    from app.models import Property
+    
+    query = Property.query
+    
+    if query_params.get('location'):
+        query = query.filter(Property.location.ilike(f"%{query_params['location']}%"))
+    
+    if query_params.get('property_type'):
+        query = query.filter(Property.property_type == query_params['property_type'])
+    
+    if query_params.get('min_price'):
+        query = query.filter(Property.price >= query_params['min_price'])
+    
+    if query_params.get('max_price'):
+        query = query.filter(Property.price <= query_params['max_price'])
+    
+    if query_params.get('bedrooms'):
+        query = query.filter(Property.bedrooms >= query_params['bedrooms'])
+    
+    if query_params.get('status'):
+        query = query.filter(Property.status == query_params['status'])
+    else:
+        # Default to only available properties
+        query = query.filter(Property.status == 'available')
+    
+    return query.order_by(Property.created_at.desc())

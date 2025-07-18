@@ -32,7 +32,13 @@ def create_app(config_name=None):
         config_name = os.getenv('FLASK_ENV', 'development')
     
     from config import config
-    app.config.from_object(config[config_name])
+    config_class = config[config_name]
+    
+    # Validate production environment if needed
+    if config_name == 'production' and hasattr(config_class, 'validate_production_env'):
+        config_class.validate_production_env()
+    
+    app.config.from_object(config_class)
     
     # Initialize extensions
     db.init_app(app)

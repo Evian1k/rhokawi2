@@ -5,7 +5,10 @@ Routes package initialization.
 from flask import Blueprint
 from .auth import auth_bp
 from .users import users_bp
-from .posts import posts_bp
+from .properties import properties_bp
+from .favorites import favorites_bp
+from .contact import contact_bp
+from .upload import upload_bp
 from .main import main_bp
 
 
@@ -22,4 +25,7 @@ def register_routes(app):
     # Register API blueprints with URL prefix
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
-    app.register_blueprint(posts_bp, url_prefix='/api/posts')
+    app.register_blueprint(properties_bp, url_prefix='/api/properties')
+    app.register_blueprint(favorites_bp, url_prefix='/api/favorites')
+    app.register_blueprint(contact_bp, url_prefix='/api/contact')
+    app.register_blueprint(upload_bp, url_prefix='/api/upload')

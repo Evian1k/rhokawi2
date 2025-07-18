@@ -38,6 +38,9 @@ def register(validated_data):
             last_name=validated_data.get('last_name')
         )
         
+        # Set role (defaults to 'client' if not specified)
+        user.role = validated_data.get('role', 'client')
+        
         # Save user to database
         db.session.add(user)
         db.session.commit()

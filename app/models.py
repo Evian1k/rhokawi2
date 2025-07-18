@@ -7,6 +7,12 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 
+# Many-to-many relationship table for user favorites
+user_favorites = db.Table('user_favorites',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('property_id', db.Integer, db.ForeignKey('properties.id'), primary_key=True)
+)
+
 
 class User(db.Model):
     """User model for authentication and user management."""
@@ -19,18 +25,23 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
+    role = db.Column(db.String(20), default='client', nullable=False)  # client, agent, admin
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    def __init__(self, username, email, password, first_name=None, last_name=None):
+    # Relationships
+    favorite_properties = db.relationship('Property', secondary=user_favorites, 
+                                        backref=db.backref('favorited_by', lazy='dynamic'))
+    
+    def __init__(self, username, email, password, first_name=None, last_name=None, role='client'):
         """Initialize User instance."""
         self.username = username
         self.email = email
         self.set_password(password)
         self.first_name = first_name
         self.last_name = last_name
+        self.role = role
     
     def set_password(self, password):
         """Hash and set user password."""
@@ -40,6 +51,25 @@ class User(db.Model):
         """Check if provided password matches user's password."""
         return check_password_hash(self.password_hash, password)
     
+    @property
+    def is_admin(self):
+        """Check if user is admin."""
+        return self.role == 'admin'
+    
+    @property
+    def is_agent(self):
+        """Check if user is agent."""
+        return self.role == 'agent'
+    
+    @property
+    def is_client(self):
+        """Check if user is client."""
+        return self.role == 'client'
+    
+    def can_manage_properties(self):
+        """Check if user can create/update/delete properties."""
+        return self.role in ['admin', 'agent']
+    
     def to_dict(self):
         """Convert user instance to dictionary."""
         return {
@@ -48,44 +78,110 @@ class User(db.Model):
             'email': self.email,
             'first_name': self.first_name,
             'last_name': self.last_name,
+            'role': self.role,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
     
     def __repr__(self):
         """String representation of User."""
-        return f'<User {self.username}>'
+        return f'<User {self.username} ({self.role})>'
 
 
-class Post(db.Model):
-    """Example Post model."""
+class Property(db.Model):
+    """Property model for real estate listings."""
     
-    __tablename__ = 'posts'
+    __tablename__ = 'properties'
     
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    property_type = db.Column(db.String(50), nullable=False)  # house, apartment, condo, etc.
+    location = db.Column(db.String(200), nullable=False)
+    address = db.Column(db.String(300), nullable=True)
+    price = db.Column(db.Numeric(12, 2), nullable=False)
+    bedrooms = db.Column(db.Integer, nullable=True)
+    bathrooms = db.Column(db.Integer, nullable=True)
+    square_feet = db.Column(db.Integer, nullable=True)
+    lot_size = db.Column(db.String(50), nullable=True)
+    year_built = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.String(20), default='available', nullable=False)  # available, sold, pending
+    features = db.Column(db.Text, nullable=True)  # JSON string of features
+    images = db.Column(db.Text, nullable=True)  # JSON string of image URLs
+    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationship
-    author = db.relationship('User', backref=db.backref('posts', lazy=True))
+    # Relationships
+    agent = db.relationship('User', backref=db.backref('properties', lazy=True))
     
     def to_dict(self):
-        """Convert post instance to dictionary."""
+        """Convert property instance to dictionary."""
+        import json
         return {
             'id': self.id,
             'title': self.title,
-            'content': self.content,
-            'author_id': self.author_id,
-            'author': self.author.username if self.author else None,
+            'description': self.description,
+            'property_type': self.property_type,
+            'location': self.location,
+            'address': self.address,
+            'price': float(self.price) if self.price else None,
+            'bedrooms': self.bedrooms,
+            'bathrooms': self.bathrooms,
+            'square_feet': self.square_feet,
+            'lot_size': self.lot_size,
+            'year_built': self.year_built,
+            'status': self.status,
+            'features': json.loads(self.features) if self.features and self.features != 'null' else [],
+            'images': json.loads(self.images) if self.images and self.images != 'null' else [],
+            'agent_id': self.agent_id,
+            'agent': {
+                'id': self.agent.id,
+                'username': self.agent.username,
+                'name': f"{self.agent.first_name} {self.agent.last_name}".strip()
+            } if self.agent else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
     
     def __repr__(self):
-        """String representation of Post."""
-        return f'<Post {self.title}>'
+        """String representation of Property."""
+        return f'<Property {self.title}>'
+
+
+class ContactMessage(db.Model):
+    """Contact message model."""
+    
+    __tablename__ = 'contact_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    status = db.Column(db.String(20), default='unread', nullable=False)  # unread, read, replied
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    property = db.relationship('Property', backref=db.backref('inquiries', lazy=True))
+    user = db.relationship('User', backref=db.backref('messages', lazy=True))
+    
+    def to_dict(self):
+        """Convert contact message instance to dictionary."""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'message': self.message,
+            'property_id': self.property_id,
+            'property_title': self.property.title if self.property else None,
+            'user_id': self.user_id,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        """String representation of ContactMessage."""
+        return f'<ContactMessage from {self.name}>'

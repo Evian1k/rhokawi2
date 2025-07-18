@@ -54,9 +54,11 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # Ensure SECRET_KEY is set in production
-    if not os.getenv('SECRET_KEY'):
-        raise ValueError("SECRET_KEY environment variable must be set in production")
+    # Only check SECRET_KEY when actually using production config
+    @classmethod
+    def validate_production_env(cls):
+        if not os.getenv('SECRET_KEY'):
+            raise ValueError("SECRET_KEY environment variable must be set in production")
 
 
 # Configuration mapping
