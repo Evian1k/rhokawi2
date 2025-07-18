@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [properties, setProperties] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsTotalPages, setContactsTotalPages] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -80,11 +82,17 @@ const Dashboard = () => {
     }
   };
 
-  const loadContacts = async () => {
+  const loadContacts = async (page = 1) => {
     try {
-      const response = await apiService.getContactMessages();
+      const response = await apiService.getContactMessages({ page, per_page: 10 });
       if (response.data) {
+<<<<<<< HEAD
         setContacts(response.data || []); // Show all contacts for admin
+=======
+        setContacts(response.data.messages || []);
+        setContactsTotalPages(response.data.pagination?.pages || 1);
+        setContactsPage(page);
+>>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
       }
     } catch (error) {
       console.error('Failed to load contacts:', error);
@@ -500,6 +508,7 @@ const Dashboard = () => {
           {/* Contacts Tab */}
           {activeTab === 'contacts' && (
             <div>
+<<<<<<< HEAD
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Contact Messages</h2>
                 <Button
@@ -512,6 +521,9 @@ const Dashboard = () => {
                 </Button>
               </div>
               
+=======
+              <h2 className="text-xl font-semibold mb-6">Contact Messages</h2>
+>>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
               {contacts.length === 0 ? (
                 <Card>
                   <CardContent className="p-12 text-center">
@@ -521,6 +533,7 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
+<<<<<<< HEAD
                 <div className="space-y-4">
                   {contacts.map((contact) => (
                     <Card key={contact.id} className={contact.status === 'unread' ? 'border-l-4 border-l-red-500' : ''}>
@@ -600,6 +613,52 @@ const Dashboard = () => {
                     </Card>
                   ))}
                 </div>
+=======
+                <>
+                  <div className="space-y-4">
+                    {contacts.map((contact) => (
+                      <Card key={contact.id}>
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h3 className="font-semibold">{contact.name}</h3>
+                              <p className="text-gray-600">{contact.email}</p>
+                              {contact.phone && <p className="text-gray-600">{contact.phone}</p>}
+                              {contact.subject && <p className="text-gray-800 font-semibold">Subject: {contact.subject}</p>}
+                            </div>
+                            <Badge variant="secondary">
+                              {new Date(contact.created_at).toLocaleDateString()}
+                            </Badge>
+                          </div>
+                          <p className="text-gray-700 mb-4">{contact.message}</p>
+                          {contact.property_title && (
+                            <p className="text-sm text-gray-500">
+                              Regarding: <span className="font-medium">{contact.property_title}</span>
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center mt-6">
+                    <Button
+                      variant="outline"
+                      disabled={contactsPage <= 1}
+                      onClick={() => loadContacts(contactsPage - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <span>Page {contactsPage} of {contactsTotalPages}</span>
+                    <Button
+                      variant="outline"
+                      disabled={contactsPage >= contactsTotalPages}
+                      onClick={() => loadContacts(contactsPage + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </>
+>>>>>>> d6d56be651c24a1e7248222c29080288f42deab3
               )}
             </div>
           )}

@@ -54,6 +54,7 @@ def send_message(validated_data):
             name=validated_data['name'],
             email=validated_data['email'],
             phone=validated_data.get('phone'),
+            subject=validated_data.get('subject'),
             message=validated_data['message'],
             property_id=property_id,
             user_id=current_user_id
