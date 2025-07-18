@@ -255,21 +255,22 @@ def delete_admin(admin_id):
 
 
 @auth_bp.route('/me', methods=['GET'])
-@jwt_required()
 def get_current_user():
     """
     Get current authenticated user information.
     """
     try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        if not current_user:
-            return handle_error(
-                Exception('User not found'),
-                'Current user not found',
-                404
-            )
+        if not current_user or not current_user.is_active:
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
         
         return success_response(
             message='Current user retrieved successfully',
@@ -277,7 +278,11 @@ def get_current_user():
         )
         
     except Exception as e:
-        return handle_error(e, 'Failed to retrieve current user', 500)
+        return jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
 
 
 @auth_bp.route('/refresh', methods=['POST'])

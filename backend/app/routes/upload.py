@@ -30,7 +30,6 @@ def create_upload_folder():
     return upload_folder
 
 @upload_bp.route('', methods=['POST'])
-@jwt_required()
 def upload_file():
     """
     Upload a single image file (admin only).
@@ -45,16 +44,19 @@ def upload_file():
     }
     """
     try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
         # Check if user exists and is active
         if not current_user or not current_user.is_active:
-            return handle_error(
-                Exception('Unauthorized'),
-                'Authentication required',
-                401
-            )
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
         
         # Check if file is present
         if 'file' not in request.files:
@@ -117,11 +119,18 @@ def upload_file():
         )
         
     except Exception as e:
+        # Check if it's a JWT validation error
+        if "verify_jwt_in_request" in str(e) or "JWT" in str(e):
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Invalid or expired token',
+                'status_code': 401
+            })), 401
         return handle_error(e, 'Failed to upload file', 500)
 
 
 @upload_bp.route('/multiple', methods=['POST'])
-@jwt_required()
 def upload_multiple_files():
     """
     Upload multiple image files (admin only).
@@ -141,16 +150,19 @@ def upload_multiple_files():
     }
     """
     try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
         # Check if user exists and is active
         if not current_user or not current_user.is_active:
-            return handle_error(
-                Exception('Unauthorized'),
-                'Authentication required',
-                401
-            )
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
         
         # Check if files are present
         if 'files' not in request.files:
@@ -220,11 +232,18 @@ def upload_multiple_files():
         )
         
     except Exception as e:
+        # Check if it's a JWT validation error
+        if "verify_jwt_in_request" in str(e) or "JWT" in str(e):
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Invalid or expired token',
+                'status_code': 401
+            })), 401
         return handle_error(e, 'Failed to upload files', 500)
 
 
 @upload_bp.route('/delete', methods=['POST'])
-@jwt_required()
 def delete_file():
     """
     Delete an uploaded file (admin only).
@@ -235,15 +254,18 @@ def delete_file():
     }
     """
     try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        if not current_user or not current_user.is_admin:
-            return handle_error(
-                Exception('Unauthorized'),
-                'Only admins can delete files',
-                403
-            )
+        if not current_user or not current_user.is_active:
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
         
         data = request.get_json()
         if not data or 'url' not in data:
@@ -280,4 +302,12 @@ def delete_file():
             )
         
     except Exception as e:
+        # Check if it's a JWT validation error
+        if "verify_jwt_in_request" in str(e) or "JWT" in str(e):
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Invalid or expired token',
+                'status_code': 401
+            })), 401
         return handle_error(e, 'Failed to delete file', 500)
