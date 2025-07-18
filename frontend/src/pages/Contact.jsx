@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -66,7 +65,9 @@ const Contact = () => {
       const messageData = {
         name: formData.name,
         email: formData.email,
-        message: `Subject: ${formData.subject}\n\nPhone: ${formData.phone}\n\nMessage:\n${formData.message}`
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message
       };
 
       const response = await apiService.sendContactMessage(messageData);
