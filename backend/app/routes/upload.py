@@ -43,6 +43,7 @@ def upload_file():
         }
     }
     """
+    # JWT validation with proper error handling
     try:
         from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
         verify_jwt_in_request()
@@ -57,7 +58,15 @@ def upload_file():
                 'message': 'Authentication required',
                 'status_code': 401
             })), 401
-        
+    except Exception as jwt_error:
+        from app.schemas import error_schema
+        return jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
+
+    try:
         # Check if file is present
         if 'file' not in request.files:
             return handle_error(
@@ -119,14 +128,6 @@ def upload_file():
         )
         
     except Exception as e:
-        # Check if it's a JWT validation error
-        if "verify_jwt_in_request" in str(e) or "JWT" in str(e):
-            from app.schemas import error_schema
-            return jsonify(error_schema.dump({
-                'error': 'Unauthorized',
-                'message': 'Invalid or expired token',
-                'status_code': 401
-            })), 401
         return handle_error(e, 'Failed to upload file', 500)
 
 
@@ -149,6 +150,7 @@ def upload_multiple_files():
         }
     }
     """
+    # JWT validation with proper error handling
     try:
         from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
         verify_jwt_in_request()
@@ -163,7 +165,15 @@ def upload_multiple_files():
                 'message': 'Authentication required',
                 'status_code': 401
             })), 401
-        
+    except Exception as jwt_error:
+        from app.schemas import error_schema
+        return jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
+
+    try:
         # Check if files are present
         if 'files' not in request.files:
             return handle_error(
@@ -232,14 +242,6 @@ def upload_multiple_files():
         )
         
     except Exception as e:
-        # Check if it's a JWT validation error
-        if "verify_jwt_in_request" in str(e) or "JWT" in str(e):
-            from app.schemas import error_schema
-            return jsonify(error_schema.dump({
-                'error': 'Unauthorized',
-                'message': 'Invalid or expired token',
-                'status_code': 401
-            })), 401
         return handle_error(e, 'Failed to upload files', 500)
 
 
@@ -253,6 +255,7 @@ def delete_file():
         "url": "uploads/images/filename.jpg"
     }
     """
+    # JWT validation with proper error handling
     try:
         from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
         verify_jwt_in_request()
@@ -266,7 +269,15 @@ def delete_file():
                 'message': 'Authentication required',
                 'status_code': 401
             })), 401
-        
+    except Exception as jwt_error:
+        from app.schemas import error_schema
+        return jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
+
+    try:
         data = request.get_json()
         if not data or 'url' not in data:
             return handle_error(
@@ -302,12 +313,4 @@ def delete_file():
             )
         
     except Exception as e:
-        # Check if it's a JWT validation error
-        if "verify_jwt_in_request" in str(e) or "JWT" in str(e):
-            from app.schemas import error_schema
-            return jsonify(error_schema.dump({
-                'error': 'Unauthorized',
-                'message': 'Invalid or expired token',
-                'status_code': 401
-            })), 401
         return handle_error(e, 'Failed to delete file', 500)

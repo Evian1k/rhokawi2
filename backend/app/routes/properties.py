@@ -157,22 +157,34 @@ def get_property(property_id):
 
 
 @properties_bp.route('', methods=['POST'])
-@jwt_required()
 @validate_json(property_create_schema)
 def create_property(validated_data):
     """
     Create a new property (admin only).
     """
+    # JWT validation with proper error handling
     try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        if not current_user or not current_user.is_admin:
-            return handle_error(
-                Exception('Unauthorized'),
-                'Only admins can create properties',
-                403
-            )
+        if not current_user or not current_user.is_active:
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
+    except Exception as jwt_error:
+        from app.schemas import error_schema
+        return jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
+
+    try:
         
         # Create new property
         property = Property(
@@ -209,22 +221,34 @@ def create_property(validated_data):
 
 
 @properties_bp.route('/<int:property_id>', methods=['PUT'])
-@jwt_required()
 @validate_json(property_update_schema)
 def update_property(property_id, validated_data):
     """
     Update a property (admin only).
     """
+    # JWT validation with proper error handling
     try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
         
-        if not current_user or not current_user.is_admin:
-            return handle_error(
-                Exception('Unauthorized'),
-                'Only admins can update properties',
-                403
-            )
+        if not current_user or not current_user.is_active:
+            from app.schemas import error_schema
+            return jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
+    except Exception as jwt_error:
+        from app.schemas import error_schema
+        return jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
+
+    try:
         
         property = Property.query.get(property_id)
         
@@ -259,7 +283,6 @@ def update_property(property_id, validated_data):
 
 
 @properties_bp.route('/<int:property_id>', methods=['DELETE'])
-@jwt_required()
 def delete_property(property_id):
     """
     Delete a property (admin only). This removes it from public view immediately.

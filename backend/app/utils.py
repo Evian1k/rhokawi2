@@ -64,6 +64,36 @@ def validate_json(schema):
     return decorator
 
 
+def validate_jwt_and_get_user():
+    """
+    Utility function to validate JWT and return user.
+    Returns tuple (user, error_response) where error_response is None if successful.
+    """
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user or not user.is_active:
+            error_response = jsonify(error_schema.dump({
+                'error': 'Unauthorized',
+                'message': 'Authentication required',
+                'status_code': 401
+            })), 401
+            return None, error_response
+        
+        return user, None
+        
+    except Exception as e:
+        error_response = jsonify(error_schema.dump({
+            'error': 'Unauthorized',
+            'message': 'Invalid or expired token',
+            'status_code': 401
+        })), 401
+        return None, error_response
+
+
 def admin_required(f):
     """
     Decorator to require admin privileges for a route.
@@ -76,28 +106,12 @@ def admin_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        try:
-            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-            verify_jwt_in_request()
-            current_user_id = get_jwt_identity()
-            user = User.query.get(current_user_id)
-            
-            if not user or not user.is_active:
-                return jsonify(error_schema.dump({
-                    'error': 'Unauthorized',
-                    'message': 'Authentication required',
-                    'status_code': 401
-                })), 401
-            
-            # In this system, all users are admins by design
-            return f(*args, **kwargs)
-            
-        except Exception as e:
-            return jsonify(error_schema.dump({
-                'error': 'Unauthorized',
-                'message': 'Invalid or expired token',
-                'status_code': 401
-            })), 401
+        user, error_response = validate_jwt_and_get_user()
+        if error_response:
+            return error_response
+        
+        # In this system, all users are admins by design
+        return f(*args, **kwargs)
     
     return decorated_function
 
