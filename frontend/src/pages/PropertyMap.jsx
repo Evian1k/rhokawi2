@@ -1,13 +1,81 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { MapPin, Loader2, Grid, Map, Filter } from 'lucide-react';
+import { MapPin, Loader2, Grid, Map, Filter, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import apiService from '@/lib/api';
+
+// Fix for default markers in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom property marker icon
+const createPropertyIcon = (price, isSelected = false) => {
+  const priceText = new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+    notation: 'compact'
+  }).format(price);
+
+  return L.divIcon({
+    html: `
+      <div class="property-marker ${isSelected ? 'selected' : ''}" style="
+        background: ${isSelected ? '#dc2626' : '#ef4444'};
+        color: white;
+        border: 3px solid white;
+        border-radius: 20px;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        white-space: nowrap;
+        transform: translate(-50%, -100%);
+        position: relative;
+      ">
+        ${priceText}
+        <div style="
+          position: absolute;
+          bottom: -6px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 6px solid ${isSelected ? '#dc2626' : '#ef4444'};
+        "></div>
+      </div>
+    `,
+    className: 'property-marker-icon',
+    iconSize: [60, 40],
+    iconAnchor: [30, 40]
+  });
+};
+
+// Component to update map view
+const MapUpdater = ({ center, zoom }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center) {
+      map.setView(center, zoom);
+    }
+  }, [center, zoom, map]);
+  
+  return null;
+};
 
 const PropertyMap = () => {
   const [properties, setProperties] = useState([]);
@@ -15,7 +83,8 @@ const PropertyMap = () => {
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState('map'); // 'map' or 'grid'
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [mapCenter, setMapCenter] = useState({ lat: -1.2921, lng: 36.8219 }); // Nairobi center
+  const [mapCenter, setMapCenter] = useState([-1.2921, 36.8219]); // Nairobi center
+  const [mapZoom, setMapZoom] = useState(11);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -36,52 +105,65 @@ const PropertyMap = () => {
       if (response.data) {
         const propertiesWithCoords = response.data.properties.map(property => ({
           ...property,
-          // Add mock coordinates for demonstration - in real app, these would be stored in DB
-          coordinates: generateMockCoordinates(property.location)
+          // Add coordinates - in real app, these would be stored in DB or geocoded
+          coordinates: generateCoordinatesFromLocation(property.location)
         }));
         setProperties(propertiesWithCoords);
       }
     } catch (err) {
       console.error('Failed to fetch properties:', err);
       setError(err.message || 'Failed to load properties');
+      toast({
+        title: "Error loading properties",
+        description: err.message || 'Failed to load properties',
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Generate mock coordinates based on location - in real app, use geocoding API
-  const generateMockCoordinates = (location) => {
-    const baseCoords = {
-      'Nairobi': { lat: -1.2921, lng: 36.8219 },
-      'Westlands': { lat: -1.2676, lng: 36.8108 },
-      'Karen': { lat: -1.3197, lng: 36.6858 },
-      'Kilimani': { lat: -1.2905, lng: 36.7866 },
-      'Lavington': { lat: -1.2830, lng: 36.7677 },
-      'Upperhill': { lat: -1.2968, lng: 36.8217 },
-      'Runda': { lat: -1.2084, lng: 36.7616 },
-      'Muthaiga': { lat: -1.2484, lng: 36.8108 },
-      'Gigiri': { lat: -1.2294, lng: 36.7617 },
-      'Spring Valley': { lat: -1.2630, lng: 36.7831 }
+  // Generate coordinates based on location - in real app, use geocoding API
+  const generateCoordinatesFromLocation = (location) => {
+    const locationCoords = {
+      'Nairobi': [-1.2921, 36.8219],
+      'Westlands': [-1.2676, 36.8108],
+      'Karen': [-1.3197, 36.6858],
+      'Kilimani': [-1.2905, 36.7866],
+      'Lavington': [-1.2830, 36.7677],
+      'Upperhill': [-1.2968, 36.8217],
+      'Runda': [-1.2084, 36.7616],
+      'Muthaiga': [-1.2484, 36.8108],
+      'Gigiri': [-1.2294, 36.7617],
+      'Spring Valley': [-1.2630, 36.7831],
+      'Kileleshwa': [-1.2768, 36.7879],
+      'Riverside': [-1.2690, 36.8140],
+      'Parklands': [-1.2647, 36.8581],
+      'Kasarani': [-1.2215, 36.8968],
+      'Embakasi': [-1.3167, 36.8926],
+      'Langata': [-1.3515, 36.7512],
+      'Kibera': [-1.3133, 36.7890],
+      'Mathare': [-1.2598, 36.8581]
     };
 
-    // Try to match location with known areas
-    const locationKey = Object.keys(baseCoords).find(key => 
+    // Try to match location with known coordinates
+    const locationKey = Object.keys(locationCoords).find(key => 
       location.toLowerCase().includes(key.toLowerCase())
     );
     
     if (locationKey) {
-      const base = baseCoords[locationKey];
-      return {
-        lat: base.lat + (Math.random() - 0.5) * 0.02, // Add small random offset
-        lng: base.lng + (Math.random() - 0.5) * 0.02
-      };
+      const base = locationCoords[locationKey];
+      return [
+        base[0] + (Math.random() - 0.5) * 0.01, // Add small random offset
+        base[1] + (Math.random() - 0.5) * 0.01
+      ];
     }
     
     // Default to Nairobi with random offset
-    return {
-      lat: -1.2921 + (Math.random() - 0.5) * 0.1,
-      lng: 36.8219 + (Math.random() - 0.5) * 0.1
-    };
+    return [
+      -1.2921 + (Math.random() - 0.5) * 0.05,
+      36.8219 + (Math.random() - 0.5) * 0.05
+    ];
   };
 
   const formatPrice = (price) => {
@@ -96,10 +178,41 @@ const PropertyMap = () => {
   const handlePropertyClick = (property) => {
     setSelectedProperty(property);
     setMapCenter(property.coordinates);
+    setMapZoom(15);
   };
 
   const handleViewProperty = (propertyId) => {
     navigate(`/properties/${propertyId}`);
+  };
+
+  const centerOnUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setMapCenter([latitude, longitude]);
+          setMapZoom(13);
+          toast({
+            title: "Location found",
+            description: "Map centered on your location",
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          toast({
+            title: "Location error",
+            description: "Could not get your location",
+            variant: "destructive",
+          });
+        }
+      );
+    } else {
+      toast({
+        title: "Location not supported",
+        description: "Geolocation is not supported by this browser",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -118,6 +231,12 @@ const PropertyMap = () => {
       <Helmet>
         <title>Property Map - Rhokawi Properties Ltd</title>
         <meta name="description" content="Explore all our properties on an interactive map. Find properties by location across Nairobi and Kenya." />
+        <link 
+          rel="stylesheet" 
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
+        />
       </Helmet>
 
       <div className="pt-16">
@@ -134,7 +253,7 @@ const PropertyMap = () => {
                 Property Map
               </h1>
               <p className="text-xl opacity-90 mb-6">
-                Explore all our {properties.length} available properties on the map
+                Explore all our {properties.length} available properties on the interactive map
               </p>
               
               {/* View Toggle */}
@@ -155,6 +274,16 @@ const PropertyMap = () => {
                   <Grid className="mr-2 h-4 w-4" />
                   Grid View
                 </Button>
+                {viewMode === 'map' && (
+                  <Button
+                    variant="outline"
+                    onClick={centerOnUserLocation}
+                    className="text-white border-white hover:bg-white/20"
+                  >
+                    <Navigation className="mr-2 h-4 w-4" />
+                    My Location
+                  </Button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -179,50 +308,66 @@ const PropertyMap = () => {
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
                 {/* Map Container */}
                 <div className="lg:col-span-3">
-                  <Card className="h-full">
+                  <Card className="h-full overflow-hidden">
                     <CardContent className="p-0 h-full">
-                      <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
-                        {/* Simplified Map Representation */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-blue-100">
-                          {/* Mock map roads */}
-                          <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-400 opacity-50"></div>
-                          <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-gray-400 opacity-50"></div>
-                          
-                          {/* Property Markers */}
-                          {properties.map((property, index) => (
-                            <div
-                              key={property.id}
-                              className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-200 ${
-                                selectedProperty?.id === property.id ? 'scale-125 z-10' : 'hover:scale-110'
-                              }`}
-                              style={{
-                                left: `${((property.coordinates.lng - 36.6) / 0.4) * 100}%`,
-                                top: `${((property.coordinates.lat + 1.4) / 0.3) * 100}%`,
-                              }}
-                              onClick={() => handlePropertyClick(property)}
-                            >
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg ${
-                                selectedProperty?.id === property.id ? 'bg-red-600' : 'bg-red-500'
-                              }`}>
-                                <MapPin className="w-4 h-4" />
-                              </div>
-                              {selectedProperty?.id === property.id && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white rounded-lg shadow-lg p-2 whitespace-nowrap z-20">
-                                  <div className="text-xs font-medium">{formatPrice(property.price)}</div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                      <MapContainer
+                        center={mapCenter}
+                        zoom={mapZoom}
+                        style={{ height: '100%', width: '100%' }}
+                        className="rounded-lg"
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <MapUpdater center={mapCenter} zoom={mapZoom} />
                         
-                        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3">
-                          <div className="text-sm font-medium mb-2">Map Legend</div>
-                          <div className="flex items-center space-x-2 text-xs">
-                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span>Available Property</span>
-                          </div>
-                        </div>
-                      </div>
+                        {properties.map((property) => (
+                          <Marker
+                            key={property.id}
+                            position={property.coordinates}
+                            icon={createPropertyIcon(property.price, selectedProperty?.id === property.id)}
+                            eventHandlers={{
+                              click: () => handlePropertyClick(property),
+                            }}
+                          >
+                            <Popup>
+                              <div className="w-64">
+                                <img
+                                  src={property.images && property.images.length > 0 
+                                    ? (property.images[0].startsWith('http') 
+                                      ? property.images[0] 
+                                      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/images/${property.images[0]}`)
+                                    : "https://images.unsplash.com/photo-1595872018818-97555653a011"
+                                  }
+                                  alt={property.title}
+                                  className="w-full h-32 object-cover rounded-lg mb-2"
+                                />
+                                <h3 className="font-semibold text-sm mb-1">{property.title}</h3>
+                                <p className="text-xs text-gray-600 mb-2 flex items-center">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  {property.location}
+                                </p>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-bold text-red-600 text-sm">
+                                    {formatPrice(property.price)}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {property.property_type}
+                                  </Badge>
+                                </div>
+                                <Button 
+                                  size="sm" 
+                                  className="w-full bg-red-600 hover:bg-red-700 text-xs"
+                                  onClick={() => handleViewProperty(property.id)}
+                                >
+                                  View Property
+                                </Button>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        ))}
+                      </MapContainer>
                     </CardContent>
                   </Card>
                 </div>
@@ -231,14 +376,17 @@ const PropertyMap = () => {
                 <div className="lg:col-span-1">
                   <Card className="h-full">
                     <CardContent className="p-4 h-full overflow-auto">
-                      <h3 className="font-semibold mb-4">Properties ({properties.length})</h3>
+                      <h3 className="font-semibold mb-4 flex items-center">
+                        <Filter className="w-4 h-4 mr-2" />
+                        Properties ({properties.length})
+                      </h3>
                       <div className="space-y-3">
                         {properties.map((property) => (
                           <div
                             key={property.id}
-                            className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                            className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
                               selectedProperty?.id === property.id 
-                                ? 'border-red-500 bg-red-50' 
+                                ? 'border-red-500 bg-red-50 shadow-md' 
                                 : 'border-gray-200 hover:border-red-300 hover:bg-gray-50'
                             }`}
                             onClick={() => handlePropertyClick(property)}
@@ -258,7 +406,7 @@ const PropertyMap = () => {
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="text-xs h-6"
+                                className="text-xs h-6 hover:bg-red-50"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleViewProperty(property.id);
@@ -282,9 +430,9 @@ const PropertyMap = () => {
                     key={property.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    transition={{ duration: 0.6, delay: index * 0.05 }}
                   >
-                    <Card className="overflow-hidden h-full flex flex-col">
+                    <Card className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
                       <div className="relative h-48">
                         <img 
                           className="w-full h-full object-cover"
@@ -297,7 +445,7 @@ const PropertyMap = () => {
                           }
                         />
                         <div className="absolute top-2 right-2">
-                          <Badge className="bg-red-600">
+                          <Badge className="bg-red-600 hover:bg-red-700">
                             {formatPrice(property.price)}
                           </Badge>
                         </div>

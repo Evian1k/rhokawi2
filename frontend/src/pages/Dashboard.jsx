@@ -20,6 +20,7 @@ const Dashboard = () => {
   const [contacts, setContacts] = useState([]);
   const [contactsPage, setContactsPage] = useState(1);
   const [contactsTotalPages, setContactsTotalPages] = useState(1);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -37,6 +38,21 @@ const Dashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Auto-refresh contact messages every 30 seconds when on contacts tab
+  useEffect(() => {
+    let interval;
+    if (activeTab === 'contacts') {
+      interval = setInterval(() => {
+        loadContacts(contactsPage);
+      }, 30000); // 30 seconds
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [activeTab, contactsPage]);
 
   const loadDashboardData = async () => {
     try {
@@ -86,12 +102,21 @@ const Dashboard = () => {
     try {
       const response = await apiService.getContactMessages({ page, per_page: 10 });
       if (response.data) {
-        setContacts(response.data.messages || []);
+        const messages = response.data.messages || [];
+        setContacts(messages);
         setContactsTotalPages(response.data.pagination?.pages || 1);
         setContactsPage(page);
+        // Count unread messages
+        const unread = messages.filter(msg => msg.status === 'unread').length;
+        setUnreadCount(unread);
       }
     } catch (error) {
       console.error('Failed to load contacts:', error);
+      toast({
+        title: "Error loading messages",
+        description: "Failed to load contact messages",
+        variant: "destructive",
+      });
     }
   };
 
@@ -348,7 +373,7 @@ const Dashboard = () => {
 
                 <button
                   onClick={() => setActiveTab('contacts')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm relative ${
                     activeTab === 'contacts'
                       ? 'border-red-500 text-red-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -356,6 +381,11 @@ const Dashboard = () => {
                 >
                   <MessageSquare className="w-4 h-4 inline mr-2" />
                   Contact Messages
+                  {unreadCount > 0 && (
+                    <Badge className="ml-2 bg-red-600 text-white text-xs px-2 py-1 min-w-[20px] h-5 flex items-center justify-center rounded-full">
+                      {unreadCount}
+                    </Badge>
+                  )}
                 </button>
               </nav>
             </div>

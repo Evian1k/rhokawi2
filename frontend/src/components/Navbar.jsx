@@ -55,13 +55,18 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <img 
-              src="/rhokawi-logo.svg" 
-              alt="Rhokawi Properties Ltd" 
-              className="h-10 w-auto"
-            />
-            <span className="text-xl font-bold text-gray-900 hidden sm:block">Rhokawi Properties</span>
+          <Link to="/" className="flex items-center space-x-3">
+            <div className="relative">
+              <img 
+                src="/rhokawi-logo.svg" 
+                alt="Rhokawi Properties Ltd" 
+                className="h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-300"
+              />
+            </div>
+            <div className="hidden sm:block">
+              <span className="text-xl font-bold text-gray-900 block leading-tight">Rhokawi Properties</span>
+              <span className="text-xs text-red-600 font-medium">Unlocking Dreams</span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

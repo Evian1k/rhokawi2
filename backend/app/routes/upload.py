@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import User
-from app.utils import success_response, handle_error
+from app.utils import success_response, handle_error, admin_required
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -30,6 +30,7 @@ def create_upload_folder():
     return upload_folder
 
 @upload_bp.route('', methods=['POST'])
+@admin_required
 def upload_file():
     """
     Upload a single image file (admin only).
@@ -43,28 +44,6 @@ def upload_file():
         }
     }
     """
-    # JWT validation with proper error handling
-    try:
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-        verify_jwt_in_request()
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        # Check if user exists and is active
-        if not current_user or not current_user.is_active:
-            from app.schemas import error_schema
-            return jsonify(error_schema.dump({
-                'error': 'Unauthorized',
-                'message': 'Authentication required',
-                'status_code': 401
-            })), 401
-    except Exception as jwt_error:
-        from app.schemas import error_schema
-        return jsonify(error_schema.dump({
-            'error': 'Unauthorized',
-            'message': 'Invalid or expired token',
-            'status_code': 401
-        })), 401
 
     try:
         # Check if file is present
@@ -132,6 +111,7 @@ def upload_file():
 
 
 @upload_bp.route('/multiple', methods=['POST'])
+@admin_required
 def upload_multiple_files():
     """
     Upload multiple image files (admin only).
@@ -150,28 +130,6 @@ def upload_multiple_files():
         }
     }
     """
-    # JWT validation with proper error handling
-    try:
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-        verify_jwt_in_request()
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        # Check if user exists and is active
-        if not current_user or not current_user.is_active:
-            from app.schemas import error_schema
-            return jsonify(error_schema.dump({
-                'error': 'Unauthorized',
-                'message': 'Authentication required',
-                'status_code': 401
-            })), 401
-    except Exception as jwt_error:
-        from app.schemas import error_schema
-        return jsonify(error_schema.dump({
-            'error': 'Unauthorized',
-            'message': 'Invalid or expired token',
-            'status_code': 401
-        })), 401
 
     try:
         # Check if files are present

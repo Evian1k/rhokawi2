@@ -1,55 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#FF8C42;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF8C42;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="buildingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0F8FF;stop-opacity:0.95" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#4472C4;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#2E5CB8;stop-opacity:1" />
     </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   
-  <!-- Orange base circle -->
-  <ellipse cx="200" cy="90" rx="120" ry="20" fill="url(#orangeGradient)"/>
+  <!-- Circular background with gradient -->
+  <circle cx="100" cy="100" r="95" fill="url(#backgroundGradient)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="90" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
   
-  <!-- Main building structure -->
-  <g transform="translate(200, 90)">
-    <!-- Central tower -->
-    <polygon points="-15,-50 15,-50 12,-20 -12,-20" fill="url(#blueGradient)"/>
-    <!-- Tower windows -->
-    <rect x="-10" y="-45" width="4" height="6" fill="white"/>
-    <rect x="6" y="-45" width="4" height="6" fill="white"/>
-    <rect x="-10" y="-35" width="4" height="6" fill="white"/>
-    <rect x="6" y="-35" width="4" height="6" fill="white"/>
+  <!-- Building complex in the center -->
+  <g transform="translate(100, 100)" filter="url(#glow)">
+    <!-- Central modern tower -->
+    <rect x="-12" y="-45" width="24" height="50" rx="2" fill="url(#buildingGradient)" stroke="url(#accentGradient)" stroke-width="1"/>
+    <!-- Tower windows in a grid pattern -->
+    <rect x="-8" y="-40" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-2" y="-40" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="4" y="-40" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-8" y="-32" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-2" y="-32" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="4" y="-32" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-8" y="-24" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-2" y="-24" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="4" y="-24" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
     
-    <!-- Left building -->
-    <polygon points="-40,-35 -15,-35 -15,-15 -40,-15" fill="url(#blueGradient)"/>
-    <!-- Left windows -->
-    <rect x="-35" y="-30" width="4" height="6" fill="white"/>
-    <rect x="-25" y="-30" width="4" height="6" fill="white"/>
+    <!-- Left wing -->
+    <rect x="-35" y="-30" width="20" height="35" rx="2" fill="url(#buildingGradient)" stroke="url(#accentGradient)" stroke-width="1"/>
+    <!-- Left wing windows -->
+    <rect x="-30" y="-25" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-22" y="-25" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-30" y="-15" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="-22" y="-15" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
     
-    <!-- Right building -->
-    <polygon points="15,-35 40,-35 40,-15 15,-15" fill="url(#blueGradient)"/>
-    <!-- Right windows -->
-    <rect x="20" y="-30" width="4" height="6" fill="white"/>
-    <rect x="30" y="-30" width="4" height="6" fill="white"/>
+    <!-- Right wing -->
+    <rect x="15" y="-30" width="20" height="35" rx="2" fill="url(#buildingGradient)" stroke="url(#accentGradient)" stroke-width="1"/>
+    <!-- Right wing windows -->
+    <rect x="19" y="-25" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="27" y="-25" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="19" y="-15" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
+    <rect x="27" y="-15" width="3" height="4" rx="0.5" fill="url(#accentGradient)"/>
     
-    <!-- Front house -->
-    <polygon points="-20,-15 20,-15 15,5 -15,5" fill="url(#blueGradient)"/>
-    <!-- Roof -->
-    <polygon points="-25,-25 0,-35 25,-25 20,-15 -20,-15" fill="url(#blueGradient)"/>
-    <!-- Front windows -->
-    <rect x="-12" y="-10" width="4" height="6" fill="white"/>
-    <rect x="8" y="-10" width="4" height="6" fill="white"/>
-    <rect x="-12" y="0" width="4" height="4" fill="white"/>
-    <rect x="8" y="0" width="4" height="4" fill="white"/>
-    <!-- Door -->
-    <rect x="-2" y="-5" width="4" height="10" fill="white"/>
+    <!-- Front building with modern entrance -->
+    <rect x="-18" y="-8" width="36" height="20" rx="2" fill="url(#buildingGradient)" stroke="url(#accentGradient)" stroke-width="1"/>
+    <!-- Modern roof/awning -->
+    <path d="M -20,-12 L 0,-18 L 20,-12 L 18,-8 L -18,-8 Z" fill="url(#accentGradient)"/>
+    
+    <!-- Entrance and windows -->
+    <rect x="-12" y="-3" width="5" height="8" rx="1" fill="url(#accentGradient)"/>
+    <rect x="7" y="-3" width="5" height="8" rx="1" fill="url(#accentGradient)"/>
+    <!-- Main entrance door -->
+    <rect x="-3" y="0" width="6" height="12" rx="1" fill="url(#accentGradient)"/>
+    <circle cx="0" cy="6" r="0.8" fill="white"/>
   </g>
   
-  <!-- Company name -->
-  <text x="200" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="url(#orangeGradient)">RHOKAWI</text>
-  <text x="200" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="url(#blueGradient)">PROPERTIES LTD</text>
-  <text x="200" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-style="italic" fill="#333">Unlocking Dreams, Building Homes</text>
+  <!-- Company name in circular arrangement -->
+  <path id="topCircle" d="M 100 100 m -65 0 a 65 65 0 1 1 130 0" fill="none"/>
+  <path id="bottomCircle" d="M 100 100 m -60 0 a 60 60 0 1 0 120 0" fill="none"/>
+  
+  <text font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" filter="url(#glow)">
+    <textPath href="#topCircle" startOffset="50%" text-anchor="middle">
+      RHOKAWI PROPERTIES
+    </textPath>
+  </text>
+  
+  <text font-family="Arial, sans-serif" font-size="10" font-weight="normal" fill="white" opacity="0.9">
+    <textPath href="#bottomCircle" startOffset="50%" text-anchor="middle">
+      ★ UNLOCKING DREAMS • BUILDING HOMES ★
+    </textPath>
+  </text>
+  
+  <!-- Subtle shine effect -->
+  <circle cx="100" cy="100" r="90" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
+  <path d="M 40 60 Q 100 40 160 60 Q 100 80 40 60" fill="white" opacity="0.1"/>
 </svg>
